@@ -18,9 +18,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_db():
     conn = mysql.connector.connect(
-        host=os.environ.get('MYSQLHOST', 'localhost'),         # Changed from MYSQL_HOST
+        host=os.environ.get('MYSQLHOST', 'mysql.railway.internal'),         # Changed from MYSQL_HOST
         user=os.environ.get('MYSQLUSER', 'root'),              # Changed from MYSQL_USER
-        password=os.environ.get('MYSQLPASSWORD', ''),          # Changed from MYSQL_PASSWORD
+        password=os.environ.get('MYSQLPASSWORD', 'PlTLWwKtkioZFAhVQzsKEStRhheiGBBz'),          # Changed from MYSQL_PASSWORD
         database=os.environ.get('MYSQLDATABASE', 'railway'),   # Changed from MYSQL_DB
         port=int(os.environ.get('MYSQLPORT', 3306))            # Added port handling
     )
