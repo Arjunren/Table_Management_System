@@ -18,10 +18,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_db():
     conn = mysql.connector.connect(
-        host=os.environ.get('MYSQL_HOST', 'localhost'),
-        user=os.environ.get('MYSQL_USER', 'root'),
-        password=os.environ.get('MYSQL_PASSWORD', ''),
-        database=os.environ.get('MYSQL_DB', 'datatelcom_tms')
+        host=os.environ.get('MYSQLHOST', 'localhost'),         # Changed from MYSQL_HOST
+        user=os.environ.get('MYSQLUSER', 'root'),              # Changed from MYSQL_USER
+        password=os.environ.get('MYSQLPASSWORD', ''),          # Changed from MYSQL_PASSWORD
+        database=os.environ.get('MYSQLDATABASE', 'railway'),   # Changed from MYSQL_DB
+        port=int(os.environ.get('MYSQLPORT', 3306))            # Added port handling
     )
     cursor = conn.cursor(dictionary=True)
     return conn, cursor
@@ -45,10 +46,10 @@ CORS(app)
 
 app.secret_key = os.environ.get('SECRET_KEY')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MYSQL_HOST'] = os.environ.get('MYSQL_HOST', 'localhost')
-app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'root')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', '')
-app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'datatelcom_tms')
+app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'mysql.railway.internal')
+app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
+app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'QAZBnxTjeKAqxPbbASlonHywPRxGcqYV')
+app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 
 def print_to_escpos(text_data, printer_ip):
     if not printer_ip:

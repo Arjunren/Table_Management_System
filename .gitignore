@@ -1,5 +1,6 @@
 # Security: Ignore environment variables
 .env
+.env.local
 
 # Python: Ignore cache and virtual environments
 __pycache__/
