@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Management System - Waiter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .active-press:active {
+            transform: scale(0.95);
+            transition: transform 0.05s;
+        }
+
+        .table-group:hover .highlight-ring,
+        .table-group:active .highlight-ring {
+            stroke: #cbd5e1 !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        /* HIDE ARROWS ON NUMBER INPUTS */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            /* Firefox */
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { primary: '#1cb2b6', primaryDark: '#17989b', } } }
+        }
+    </script>
+    <link rel="icon" href="https://blueoceanbar.com/wp-content/uploads/2025/09/BOB-Logo_White-150x150.png"
+        sizes="32x32">
+</head>
+
+<body class="bg-[#f1f5f9] text-slate-800 h-screen w-full m-0 p-0 overflow-hidden flex flex-col">
+
+    <header
+        class="h-14 md:h-16 bg-white border-b border-slate-200 shadow-sm px-4 md:px-6 flex items-center justify-between shrink-0 z-20 relative">
+        <div class="flex items-center gap-4 md:gap-6">
+            <div class="hidden md:flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm bg-[#E47E61] shadow-inner"></span>
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Occupied</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm bg-[#D9C8A9] shadow-inner"></span>
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Vacant</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 md:gap-4 shrink-0">
+            <div class="hidden sm:flex flex-col items-end mr-1 text-right">
+                <span class="text-xs font-extrabold text-slate-800 leading-none">{{ session.name | default('Waiter')
+                    }}</span>
+                <span class="text-[10px] uppercase text-primary font-bold mt-1">{{ session.role | default('Waiter')
+                    }}</span>
+            </div>
+            <div class="hidden sm:block w-px h-8 bg-slate-200 mx-1"></div>
+
+            <button onclick="openLogoutModal()" title="Log out"
+                class="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-white hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-500 transition-colors shadow-sm active-press">
+                <i class="fa-solid fa-power-off md:text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="md:hidden flex items-center justify-center gap-4 py-2 bg-white border-b border-slate-200 shrink-0">
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-[#E47E61]"></span><span
+                class="text-[10px] font-bold text-slate-500 uppercase">Occupied</span></div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-[#D9C8A9]"></span><span
+                class="text-[10px] font-bold text-slate-500 uppercase">Vacant</span></div>
+    </div>
+
+    <main class="flex-grow w-full relative bg-slate-100 overflow-hidden p-4 md:p-6">
+        <div
+            class="bg-white rounded-3xl shadow-xl p-4 md:p-8 h-full relative overflow-hidden flex flex-col gap-4 md:gap-6">
+            <div class="hidden xl:flex items-center justify-start shrink-0">
+                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tighter text-slate-900">Floor Plan</h1>
+            </div>
+
+            <div class="relative flex-grow border border-slate-200 rounded-3xl overflow-hidden bg-[#fafafa]">
+                <div class="absolute inset-0">
+                    <svg id="svgCanvas" width="100%" height="100%" viewBox="0 0 1000 800"
+                        preserveAspectRatio="xMidYMid meet">
+                        <image id="floorplan-bg" x="0" y="0" width="100%" height="100%"
+                            preserveAspectRatio="xMidYMid slice" href=""></image>
+                        <g id="dynamic-elements"></g>
+                        <g id="dynamic-tables"></g>
+                    </svg>
+                </div>
+            </div>
+
+            <p class="text-[1vw] font-bold uppercase tracking-wider text-slate-400 text-center shrink-0">Tap any table
+                on
+                the floor plan to manage status</p>
+        </div>
+    </main>
+
+    <div id="loadingModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 transition-opacity opacity-0">
+        <div class="bg-white px-6 py-5 rounded-3xl shadow-2xl flex flex-col items-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary mb-3"></i>
+            <p class="text-[13px] font-bold text-slate-700">Processing...</p>
+        </div>
+    </div>
+
+    <div id="occupiedModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[160] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 flex flex-col max-h-[90vh]">
+            <button onclick="closeOccupiedModal()"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-colors active-press z-10"><i
+                    class="fa-solid fa-xmark"></i></button>
+
+            <div class="mb-4 shrink-0 text-center">
+                <div
+                    class="w-12 h-12 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2 text-xl border-4 border-orange-100">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" id="occupied-table-name"></h2>
+                <p class="text-slate-500 font-bold text-[13px] mt-0.5" id="occ-guest-name">Loading...</p>
+            </div>
+
+            <div class="flex-grow overflow-y-auto custom-scrollbar mb-4 space-y-4 pr-2">
+                <div class="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Contact</span>
+                        <span id="occ-guest-contact" class="text-xs font-bold text-slate-700">--</span>
+                    </div>
+                    <div class="flex flex-col text-right">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Total Guests</span>
+                        <span id="occ-guest-count" class="text-xs font-bold text-slate-700">--</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="flex justify-between items-end border-b border-slate-100 pb-1.5 mb-2">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Current Orders</p>
+                    </div>
+                    <div id="occ-orders-list" class="space-y-2">
+                        <p class="text-xs text-slate-400 text-center py-4"><i
+                                class="fa-solid fa-spinner fa-spin mr-2"></i>Loading orders...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shrink-0 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                <div class="grid grid-cols-3 gap-2" id="occ-action-grid">
+                    <button onclick="promptManagerAuth()"
+                        class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all active-press text-[10px] sm:text-xs flex flex-col justify-center items-center gap-1">
+                        <i class="fa-solid fa-receipt text-sm"></i> Print Bill
+                    </button>
+                    <button id="addGuestBtn" onclick="promptAddGuest()"
+                        class="py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold rounded-xl transition-all active-press text-[10px] sm:text-xs flex flex-col justify-center items-center gap-1">
+                        <i class="fa-solid fa-user-plus text-sm"></i> Add Guest
+                    </button>
+                    <button onclick="addMoreOrders()"
+                        class="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-xl transition-all active-press text-[10px] sm:text-xs flex flex-col justify-center items-center gap-1">
+                        <i class="fa-solid fa-cart-plus text-sm"></i> Add Orders
+                    </button>
+                </div>
+                <div class="flex gap-2 mb-1">
+                    <button id="cancelTransactionBtn" onclick="confirmCancelTransaction()"
+                        class="hidden w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-3 rounded-xl text-[13px] font-bold transition-all active-press items-center justify-center gap-2">
+                        <i class="fa-solid fa-ban text-base"></i> Cancel
+                    </button>
+                    <button onclick="closeOccupiedModal()"
+                        class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-lg transition-all active-press text-[13px]">
+                        Close Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addGuestModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[270] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-5 md:p-6 modal-content text-left">
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Add Guests</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-4">How many guests are joining?</p>
+
+            <div class="mb-4">
+                <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2 w-max shadow-sm">
+                    <button type="button" onclick="changeAddGuestCount(-1)"
+                        class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-rose-500 active-press"><i
+                            class="fa-solid fa-minus"></i></button>
+                    <span id="addGuestCount" class="font-bold w-6 text-center text-slate-800">1</span>
+                    <button type="button" onclick="changeAddGuestCount(1)"
+                        class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-primary active-press"><i
+                            class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div id="dynamicAddGuestInputs" class="space-y-2 mb-5 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeAddGuestModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">Cancel</button>
+                <button onclick="submitNewGuest()"
+                    class="w-1/2 bg-primary hover:bg-primaryDark text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active-press">Add
+                    Guests</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="managerAuthModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[270] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-5 md:p-6 modal-content text-center">
+            <div
+                class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3 text-xl border-4 border-indigo-100">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Manager Access</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-5">Authorization required to print bill.</p>
+            <div class="mb-5 relative">
+                <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="password" id="managerPassword" placeholder="Manager Password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeManagerAuthModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">Cancel</button>
+                <button onclick="confirmPrintBillAuth()"
+                    class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active-press">Authorize</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="itemStatusModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[280] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-5 md:p-6 modal-content text-center">
+            <div id="itemStatusIcon"
+                class="w-12 h-12 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-3 text-xl border-4 border-orange-100">
+                <i class="fa-solid fa-fire"></i>
+            </div>
+            <h2 id="itemStatusTitle" class="text-xl font-extrabold text-slate-800 mb-1">Open Fire</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-5">Change status for <span id="itemStatusName"
+                    class="font-bold text-slate-700">Item</span>?</p>
+            <div class="flex gap-3">
+                <button onclick="closeItemStatusModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">Cancel</button>
+                <button id="itemStatusConfirmBtn"
+                    class="w-1/2 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active-press">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="guestModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[160] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[380px] md:max-w-md rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 flex flex-col max-h-[90vh]">
+            <button onclick="closeGuestModal()"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2.5 rounded-full transition-colors active-press z-10"><i
+                    class="fa-solid fa-xmark"></i></button>
+            <div class="mb-4 shrink-0">
+                <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Guest Details</h2>
+                <p class="font-bold text-primary text-[13px] mt-1" id="guest-modal-table"></p>
+            </div>
+            <div class="overflow-y-auto custom-scrollbar pr-2 flex-grow space-y-4">
+                <div class="space-y-3">
+                    <p
+                        class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
+                        Primary Guest</p>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">Guest Name <span
+                                class="text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="text" id="primaryGuestName" placeholder="e.g. Jarek Melgar"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-semibold outline-none focus:border-primary focus:bg-white transition-colors">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Contact Number</label>
+                            <input type="text" id="primaryGuestContact" placeholder="09XX-XXX-XXXX"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-semibold outline-none focus:border-primary focus:bg-white transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Email Address</label>
+                            <input type="email" id="primaryGuestEmail" placeholder="jarek@email.com"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-semibold outline-none focus:border-primary focus:bg-white transition-colors">
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3 pt-2">
+                    <p
+                        class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
+                        Additional Guests</p>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">How many extra guests?</label>
+                        <div
+                            class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2 w-max shadow-sm">
+                            <button type="button" onclick="changeGuestCount(-1)"
+                                class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-rose-500 active-press"><i
+                                    class="fa-solid fa-minus"></i></button>
+                            <span id="additionalGuestCount" class="font-bold w-6 text-center text-slate-800">0</span>
+                            <button type="button" onclick="changeGuestCount(1)"
+                                class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-primary active-press"><i
+                                    class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div id="dynamicGuestInputs" class="space-y-2 mt-2"></div>
+                </div>
+            </div>
+            <div class="shrink-0 pt-4 mt-2 border-t border-slate-100">
+                <button onclick="proceedToOrders()"
+                    class="w-full py-3 bg-primary hover:bg-primaryDark text-white text-[13px] font-bold rounded-xl shadow-lg shadow-primary/30 transition-all active-press">
+                    Proceed to Orders <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ordersModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[170] hidden items-center justify-center p-2 md:p-4 opacity-0 transition-opacity duration-300">
+        <div
+            class="bg-white w-[96%] md:w-[92%] max-w-6xl h-[95vh] md:h-[85vh] rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-300 flex flex-col">
+
+            <div
+                class="flex items-start justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-100 bg-white shrink-0 z-10">
+                <div>
+                    <h2 class="text-xl md:text-3xl font-black text-slate-800 tracking-tight">Menu & Orders</h2>
+                    <div class="flex items-center gap-2.5 mt-1">
+                        <span
+                            class="bg-primary/10 text-primary font-extrabold px-2 py-1 rounded-md text-[10px] md:text-[11px] uppercase tracking-wider">
+                            Table <span id="orders-table-no"></span>
+                        </span>
+                        <span class="text-slate-400 font-medium text-[11px] md:text-sm">
+                            Guest: <span id="orders-guest-name" class="font-bold text-slate-700"></span>
+                        </span>
+                    </div>
+                </div>
+                <button onclick="closeOrdersModal()"
+                    class="text-slate-400 hover:text-rose-500 bg-slate-50 hover:bg-rose-50 p-2.5 md:p-3 rounded-full transition-colors active-press shadow-sm border border-slate-100 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-base md:text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex-grow flex flex-col lg:flex-row bg-slate-50/50 overflow-hidden relative">
+
+                <div
+                    class="w-full lg:w-56 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex lg:flex-col shrink-0 shadow-sm z-10">
+                    <div
+                        class="hidden lg:flex items-center gap-2 p-4 border-b border-slate-100 bg-slate-50 text-slate-500">
+                        <i class="fa-solid fa-layer-group text-sm"></i>
+                        <span class="font-extrabold text-xs uppercase tracking-wider">Categories</span>
+                    </div>
+                    <div class="flex lg:flex-col flex-1 overflow-x-auto lg:overflow-y-auto p-2 lg:p-3 custom-scrollbar gap-2 lg:gap-1 items-center lg:items-stretch"
+                        id="category-sidebar"></div>
+                </div>
+
+                <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+
+                    <div
+                        class="p-3 md:p-4 border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3">
+                        <div class="relative w-full max-w-md">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-search text-slate-400"></i>
+                            </div>
+                            <input type="text" id="menu-search" oninput="renderMenu(activeCategory)"
+                                placeholder="Search delicious items..."
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-800 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+                        </div>
+
+                        <button id="floatingSkipBtn" onclick="confirmSkipOrders()"
+                            class="hidden shrink-0 bg-slate-800 hover:bg-slate-900 text-white px-4 md:px-5 py-2.5 rounded-xl shadow-md shadow-slate-800/20 flex items-center gap-2 active-press transition-all border border-slate-700">
+                            <i class="fa-solid fa-chair text-[13px] text-slate-300"></i>
+                            <span class="font-bold text-[11px] md:text-[13px] whitespace-nowrap">Skip & Occupy</span>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-3 md:p-5 custom-scrollbar grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 content-start"
+                        id="menu-grid"></div>
+                </div>
+            </div>
+
+            <button id="floatingCartBtn" onclick="openCartModal()"
+                class="absolute bottom-4 right-4 md:bottom-6 md:right-6 bg-primary hover:bg-primaryDark text-white px-4 py-2.5 md:py-3 rounded-2xl shadow-xl shadow-primary/30 flex items-center gap-3 z-50 hidden active-press transition-all">
+                <div class="relative bg-white/20 w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center">
+                    <i class="fa-solid fa-receipt text-base md:text-lg"></i>
+                    <span id="floatingCartCount"
+                        class="absolute -top-2 -right-2 md:-top-2.5 md:-right-2.5 bg-rose-500 text-white text-[10px] font-black w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full border-2 border-primary shadow-sm">0</span>
+                </div>
+                <div class="flex flex-col text-left border-l border-white/20 pl-3">
+                    <span class="text-[9px] font-bold text-white/80 uppercase tracking-wider">Total
+                        Estimate</span>
+                    <span id="floatingCartTotal"
+                        class="font-black text-sm md:text-base leading-tight tracking-tight">₱0.00</span>
+                </div>
+            </button>
+
+        </div>
+    </div>
+
+    <div id="itemConfigModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-5 md:p-6 flex flex-col">
+            <h2 id="configItemName" class="text-xl font-extrabold text-slate-800 mb-1">Item Name</h2>
+            <p id="configItemPrice" class="text-[13px] font-bold text-primary mb-4">₱0.00</p>
+
+            <div class="mb-4">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Quantity</label>
+                <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2 w-max shadow-sm">
+                    <button onclick="changeConfigQty(-1)"
+                        class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-rose-500 active-press"><i
+                            class="fa-solid fa-minus"></i></button>
+                    <span id="configQty" class="font-bold w-6 text-center text-slate-800">1</span>
+                    <button onclick="changeConfigQty(1)"
+                        class="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 text-slate-500 hover:text-primary active-press"><i
+                            class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Notes
+                    (Optional)</label>
+                <input type="text" id="configNote" placeholder="e.g. Less ice, no onions..."
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-[13px] font-semibold outline-none focus:border-primary focus:bg-white transition-colors shadow-inner">
+            </div>
+
+            <div id="configOpenFireContainer"
+                class="mb-5 flex items-center gap-3 bg-orange-50 p-2.5 rounded-xl border border-orange-100">
+                <input type="checkbox" id="configOpenFire" class="w-4 h-4 accent-orange-500 cursor-pointer rounded">
+                <label for="configOpenFire"
+                    class="text-[13px] font-bold text-orange-800 cursor-pointer select-none">Open
+                    Fire (Prepare Immediately)</label>
+            </div>
+
+            <div class="flex gap-3 mt-auto pt-4 border-t border-slate-100">
+                <button onclick="closeItemConfigModal()"
+                    class="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all active-press">Cancel</button>
+                <button onclick="saveItemConfig()"
+                    class="w-1/2 py-3 bg-primary hover:bg-primaryDark text-white text-sm font-bold rounded-xl shadow-lg shadow-primary/30 transition-all active-press"
+                    id="configSaveBtn">Add Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cartSummaryModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[190] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-[92%] max-w-[380px] md:max-w-md rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-5 md:p-6 flex flex-col max-h-[85vh]">
+            <button onclick="closeCartModal()"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-colors active-press z-10"><i
+                    class="fa-solid fa-xmark"></i></button>
+
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Your Orders</h2>
+            <p class="text-[11px] font-medium text-slate-500 mb-4 uppercase tracking-wider">Review & Edit Items
+            </p>
+
+            <div class="flex-grow overflow-y-auto custom-scrollbar pr-2 mb-4 space-y-2" id="summary-cart-items">
+            </div>
+
+            <div class="shrink-0 border-t border-slate-200 pt-4">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="font-bold text-slate-500 text-[11px] uppercase tracking-wide">Total Estimate</span>
+                    <span id="summary-cart-total" class="font-black text-xl text-emerald-600">₱0.00</span>
+                </div>
+                <button onclick="promptSendOrder()"
+                    class="w-full py-3 bg-primary hover:bg-primaryDark text-white text-sm font-bold rounded-xl shadow-lg shadow-primary/30 transition-all active-press flex items-center justify-center gap-2">
+                    Send to Kitchen/Bar <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="noticeModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[500] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 text-center">
+            <div
+                class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border-4 border-blue-100">
+                <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-2" id="noticeTitle">Notice</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-6" id="noticeMessage">Message</p>
+            <button onclick="closeNoticeModal()"
+                class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active-press">Okay</button>
+        </div>
+    </div>
+
+    <div id="logoutModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[500] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 text-center">
+            <button onclick="closeLogoutModal()"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2.5 rounded-full transition-colors active-press"><i
+                    class="fa-solid fa-xmark"></i></button>
+            <div
+                class="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border-4 border-rose-100">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-2">Ready to Leave?</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-6">Are you sure you want to log out of your account?</p>
+            <div class="flex gap-3">
+                <button onclick="closeLogoutModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">Cancel</button>
+                <button onclick="confirmLogout()"
+                    class="w-1/2 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/30 transition-all active-press">Log
+                    Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmOrderModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[500] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 text-center">
+            <div
+                class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border-4 border-emerald-100">
+                <i class="fa-solid fa-bell-concierge"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Confirm Order</h2>
+            <p class="text-[13px] font-medium text-slate-500 mb-6">Are you sure you want to send these orders to the
+                Kitchen/Bar?</p>
+
+            <div class="flex gap-3">
+                <button onclick="closeConfirmOrderModal()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">Cancel</button>
+                <button onclick="executeFinalOrder()"
+                    class="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all active-press">Yes,
+                    Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div
+            class="bg-white w-[92%] max-w-[340px] md:max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform duration-200 p-5 md:p-6 text-center">
+
+            <div id="confirmIconBg"
+                class="w-12 h-12 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i id="confirmIcon" class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+
+            <h2 id="confirmTitle" class="text-xl font-black text-slate-800 mb-2">Confirm Action</h2>
+            <p id="confirmMessage" class="text-[13px] font-medium text-slate-500 mb-6">Are you sure you want to proceed?
+            </p>
+
+            <div class="flex gap-3">
+                <button onclick="closeConfirm()"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-all active-press">
+                    No, Cancel
+                </button>
+                <button id="confirmActionBtn" onclick="proceedConfirm()"
+                    class="w-1/2 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/30 transition-all active-press">
+                    Yes, Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedTableId = null;
+        let currentTableCapacity = 4;
+        let currentTableTotalGuests = 0;
+        let tableData = {};
+        let currentGuestData = {};
+        let currentOccupiedTxId = null;
+        let menuData = [];
+        let currentCart = [];
+        let activeCategory = 'all';
+        let conf_menuId, conf_name, conf_price, conf_type, conf_avail;
+
+        let layoutData = { tables: {}, elements: {} };
+        let globalSettings = { color_vacant: '#D9C8A9', color_occupied: '#E47E61' };
+
+        function toggleLoader(show) {
+            const m = document.getElementById('loadingModal');
+            if (show) {
+                m.classList.remove('hidden'); m.classList.add('flex');
+                setTimeout(() => m.classList.remove('opacity-0'), 10);
+            } else {
+                m.classList.add('opacity-0');
+                setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+            }
+        }
+
+        // ==========================================
+        // 1. AUTO-UPDATE FLOORPLAN (TABLES)
+        // ==========================================
+        async function initFloorplan() {
+            try {
+                const res = await fetch('/api/floorplan/data');
+                const data = await res.json();
+                if (data.success) {
+                    tableData = {};
+                    for (let key in data.tables) {
+                        tableData[data.tables[key].id] = data.tables[key];
+                    }
+                    layoutData.tables = data.tables;
+                    layoutData.elements = data.elements;
+                    if (data.settings) {
+                        globalSettings.color_vacant = data.settings.color_vacant || '#D9C8A9';
+                        globalSettings.color_occupied = data.settings.color_occupied || '#E47E61';
+                        if (data.settings.floorplan_bg_image) {
+                            document.getElementById('floorplan-bg').setAttribute('href', data.settings.floorplan_bg_image);
+                        }
+                    }
+                    renderCanvas();
+                }
+            } catch (error) { console.error("Error fetching floorplan data:", error); }
+        }
+
+        // Tumutunog ito every 5 seconds para mag-update ang tables
+        setInterval(initFloorplan, 5000);
+
+        function renderCanvas() {
+            document.getElementById('dynamic-tables').innerHTML = '';
+            document.getElementById('dynamic-elements').innerHTML = '';
+
+            for (let id in layoutData.elements) {
+                renderElement(layoutData.elements[id]);
+            }
+            for (let key in layoutData.tables) {
+                renderTable(layoutData.tables[key]);
+            }
+        }
+
+        function renderTable(t) {
+            const container = document.getElementById('dynamic-tables');
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'table-group cursor-pointer hover:opacity-80 transition-opacity');
+            g.setAttribute('id', `table-${t.id}`);
+            g.addEventListener('click', () => { selectTable(t.id); });
+
+            const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            ring.setAttribute('class', 'highlight-ring');
+            ring.setAttribute('cx', t.posX);
+            ring.setAttribute('cy', t.posY);
+            ring.setAttribute('r', Math.max(t.width, t.height) / 2 + 8);
+            ring.setAttribute('fill', 'transparent');
+            ring.setAttribute('stroke', 'transparent');
+            ring.setAttribute('stroke-width', '4');
+            ring.style.transition = 'stroke 0.2s';
+            g.appendChild(ring);
+
+            let shapeEl;
+            if (t.shape === 'rect') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shapeEl.setAttribute('x', t.posX - (t.width / 2));
+                shapeEl.setAttribute('y', t.posY - (t.height / 2));
+                shapeEl.setAttribute('width', t.width);
+                shapeEl.setAttribute('height', t.height);
+                shapeEl.setAttribute('rx', 8);
+            } else {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                shapeEl.setAttribute('cx', t.posX);
+                shapeEl.setAttribute('cy', t.posY);
+                shapeEl.setAttribute('r', t.width / 2);
+            }
+
+            let actualFill = 'transparent';
+            if (t.fillColor !== 'transparent') {
+                actualFill = t.status === 'occupied' ? globalSettings.color_occupied : globalSettings.color_vacant;
+            }
+            shapeEl.setAttribute('fill', actualFill);
+            shapeEl.setAttribute('stroke', t.strokeColor);
+            shapeEl.setAttribute('stroke-width', '4');
+
+            const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textEl.setAttribute('x', t.posX);
+            textEl.setAttribute('y', t.posY + 5);
+            textEl.setAttribute('font-size', '14');
+            textEl.setAttribute('font-weight', '900');
+            textEl.setAttribute('fill', t.textColor);
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('pointer-events', 'none');
+            textEl.textContent = t.name.replace('Table-', 'T');
+
+            g.appendChild(shapeEl);
+            g.appendChild(textEl);
+            container.appendChild(g);
+        }
+
+        function renderElement(e) {
+            const container = document.getElementById('dynamic-elements');
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            let shapeEl;
+            if (e.elType === 'line') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                shapeEl.setAttribute('x1', e.posX);
+                shapeEl.setAttribute('y1', e.posY);
+                shapeEl.setAttribute('x2', e.posX2);
+                shapeEl.setAttribute('y2', e.posY2);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                shapeEl.setAttribute('stroke-linecap', 'round');
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'text') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                shapeEl.setAttribute('x', e.posX);
+                shapeEl.setAttribute('y', e.posY);
+                shapeEl.setAttribute('font-size', e.fontSize);
+                shapeEl.setAttribute('font-family', "'Inter', sans-serif");
+                shapeEl.setAttribute('font-weight', 'bold');
+                shapeEl.setAttribute('fill', e.textColor);
+                shapeEl.setAttribute('text-anchor', 'middle');
+                shapeEl.textContent = e.content;
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'shape') {
+                if (e.shapeType === 'rect') {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                    shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                    shapeEl.setAttribute('width', e.width);
+                    shapeEl.setAttribute('height', e.height);
+                    shapeEl.setAttribute('rx', 8);
+                } else {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    shapeEl.setAttribute('cx', e.posX);
+                    shapeEl.setAttribute('cy', e.posY);
+                    shapeEl.setAttribute('r', e.width / 2);
+                }
+                shapeEl.setAttribute('fill', e.fillColor);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'image') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                shapeEl.setAttribute('href', e.content);
+                shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                shapeEl.setAttribute('width', e.width);
+                shapeEl.setAttribute('height', e.height);
+                shapeEl.setAttribute('preserveAspectRatio', 'none');
+                g.appendChild(shapeEl);
+            }
+
+            container.appendChild(g);
+        }
+
+        function selectTable(id) {
+            selectedTableId = id;
+            const table = tableData[id];
+
+            document.querySelectorAll(".table-group .highlight-ring").forEach(ring => ring.setAttribute('stroke', 'transparent'));
+            const selectedGroup = document.getElementById(`table-${id}`);
+            if (selectedGroup) {
+                selectedGroup.querySelector('.highlight-ring').setAttribute('stroke', '#3b82f6');
+            }
+
+            if (table.status === 'vacant') {
+                openGuestModal();
+            } else {
+                openOccupiedModal();
+            }
+        }
+
+        // ==========================================
+        // 2. NOTICE MODAL WITH CALLBACK (FOR AUTO-LOGOUT)
+        // ==========================================
+        let noticeCallback = null;
+
+        function showNotice(title, message, callback = null) {
+            document.getElementById('noticeTitle').textContent = title;
+            document.getElementById('noticeMessage').textContent = message;
+            noticeCallback = callback;
+
+            const m = document.getElementById('noticeModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeNoticeModal() {
+            const m = document.getElementById('noticeModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+                if (noticeCallback) {
+                    noticeCallback();
+                    noticeCallback = null;
+                }
+            }, 200);
+        }
+
+        // ==========================================
+        // MODALS AND OPERATIONS
+        // ==========================================
+        async function openOccupiedModal() {
+            document.getElementById('occupied-table-name').textContent = tableData[selectedTableId].name;
+            document.getElementById('occ-guest-name').textContent = 'Loading...';
+            document.getElementById('occ-guest-contact').textContent = '--';
+            document.getElementById('occ-guest-count').textContent = '--';
+            document.getElementById('occ-orders-list').innerHTML = '<p class="text-xs text-slate-400 text-center py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading orders...</p>';
+
+            const m = document.getElementById('occupiedModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+
+            refreshOccupiedOrders();
+        }
+
+        async function refreshOccupiedOrders() {
+            if (!selectedTableId) return;
+            try {
+                const response = await fetch(`/api/table_details/${selectedTableId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentOccupiedTxId = result.data.transaction_id;
+                    document.getElementById('occ-guest-name').textContent = result.data.guest_name;
+                    document.getElementById('occ-guest-contact').textContent = result.data.contact_number || 'N/A';
+                    document.getElementById('occ-guest-count').textContent = result.data.guest_count;
+
+                    let currentGuests = parseInt(result.data.guest_count) || 0;
+                    currentTableTotalGuests = currentGuests;
+                    let tableCap = parseInt(tableData[selectedTableId]?.capacity) || 4;
+
+                    if (result.data.total_capacity) {
+                        tableCap = parseInt(result.data.total_capacity);
+                    } else if (result.data.capacity) {
+                        tableCap = parseInt(result.data.capacity);
+                    }
+                    currentTableCapacity = tableCap;
+
+                    const addGuestBtn = document.getElementById('addGuestBtn');
+                    const actionsGrid = document.getElementById('occ-action-grid');
+
+                    if (currentGuests >= tableCap) {
+                        addGuestBtn.classList.add('hidden');
+                        addGuestBtn.classList.remove('flex');
+                        actionsGrid.classList.remove('grid-cols-3');
+                        actionsGrid.classList.add('grid-cols-2');
+                    } else {
+                        addGuestBtn.classList.remove('hidden');
+                        addGuestBtn.classList.add('flex');
+                        actionsGrid.classList.remove('grid-cols-2');
+                        actionsGrid.classList.add('grid-cols-3');
+                    }
+
+                    const ordersList = document.getElementById('occ-orders-list');
+                    const cancelBtn = document.getElementById('cancelTransactionBtn');
+
+                    if (result.data.orders && result.data.orders.length > 0) {
+                        if (cancelBtn) {
+                            cancelBtn.classList.add('hidden');
+                            cancelBtn.classList.remove('flex');
+                        }
+
+                        ordersList.innerHTML = result.data.orders.map(order => {
+                            let badgeColor = 'bg-slate-100 text-slate-600';
+                            let onclickAction = '';
+                            let hoverClass = '';
+
+                            if (order.status === 'pending') {
+                                badgeColor = 'bg-orange-100 text-orange-600';
+                                onclickAction = `onclick="promptItemStatus(${order.item_id}, 'preparing', '${order.menu_name.replace(/'/g, "\\'")}')"`;
+                                hoverClass = 'cursor-pointer hover:border-orange-300';
+                            } else if (order.status === 'preparing') {
+                                badgeColor = 'bg-indigo-100 text-indigo-600';
+                                onclickAction = `onclick="promptItemStatus(${order.item_id}, 'served', '${order.menu_name.replace(/'/g, "\\'")}')"`;
+                                hoverClass = 'cursor-pointer hover:border-indigo-300';
+                            } else if (order.status === 'served') {
+                                badgeColor = 'bg-emerald-100 text-emerald-600';
+                            } else if (order.status === 'void') {
+                                badgeColor = 'bg-rose-100 text-rose-600 line-through';
+                            }
+
+                            const noteHTML = order.note ? `<p class="text-[10px] text-slate-500 italic mt-0.5"><i class="fa-solid fa-note-sticky mr-1"></i>${order.note}</p>` : '';
+
+                            return `
+                            <div ${onclickAction} class="flex justify-between items-center bg-white border border-slate-200 p-2.5 rounded-xl shadow-sm transition-all ${hoverClass}">
+                                <div class="flex items-start gap-3">
+                                    <span class="bg-slate-100 text-slate-600 font-extrabold text-xs px-2 py-1 rounded-md mt-0.5">${order.quantity}x</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold text-slate-800">${order.menu_name}</span>
+                                        ${noteHTML}
+                                    </div>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${badgeColor} shrink-0">${order.status}</span>
+                            </div>`;
+                        }).join('');
+                    } else {
+                        if (cancelBtn) {
+                            cancelBtn.classList.remove('hidden');
+                            cancelBtn.classList.add('flex');
+                        }
+
+                        ordersList.innerHTML = '<p class="text-xs font-medium text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">No active orders found.</p>';
+                    }
+                } else {
+                    document.getElementById('occ-guest-name').textContent = 'Data unavailable';
+                    document.getElementById('occ-orders-list').innerHTML = '<p class="text-xs text-rose-400 text-center py-4">Failed to load details.</p>';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function changeGuestCount(delta) {
+            let countEl = document.getElementById('additionalGuestCount');
+            let currentVal = parseInt(countEl.textContent) || 0;
+            let newVal = currentVal + delta;
+            let tableCap = parseInt(tableData[selectedTableId]?.capacity) || 4;
+            let maxAdditional = Math.max(0, tableCap - 1);
+
+            if (newVal < 0) {
+                newVal = 0;
+            } else if (newVal > maxAdditional) {
+                showNotice("Table Full", `This specific table only fits ${tableCap}. \n\nIf you merged tables, proceed to open this table first, then use the "Add Guest" button inside to utilize the expanded capacity.`);
+                newVal = maxAdditional;
+            }
+
+            countEl.textContent = newVal;
+            updateGuestInputs(newVal, currentVal);
+        }
+
+        function closeOccupiedModal() {
+            const m = document.getElementById('occupiedModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => {
+                m.classList.add('hidden'); m.classList.remove('flex');
+                document.querySelectorAll(".table-group .highlight-ring").forEach(ring => ring.setAttribute('stroke', 'transparent'));
+                selectedTableId = null;
+                currentOccupiedTxId = null;
+            }, 200);
+        }
+
+        function promptItemStatus(itemId, newStatus, itemName) {
+            document.getElementById('itemStatusName').textContent = itemName;
+            const titleEl = document.getElementById('itemStatusTitle');
+            const iconEl = document.getElementById('itemStatusIcon');
+            const confirmBtn = document.getElementById('itemStatusConfirmBtn');
+
+            if (newStatus === 'preparing') {
+                titleEl.textContent = 'Open Fire';
+                iconEl.className = 'w-14 h-14 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border-4 border-orange-100';
+                iconEl.innerHTML = '<i class="fa-solid fa-fire"></i>';
+                confirmBtn.className = 'w-1/2 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active-press';
+                confirmBtn.textContent = 'Open Fire';
+            } else if (newStatus === 'served') {
+                titleEl.textContent = 'Mark as Served';
+                iconEl.className = 'w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border-4 border-emerald-100';
+                iconEl.innerHTML = '<i class="fa-solid fa-bell-concierge"></i>';
+                confirmBtn.className = 'w-1/2 bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active-press';
+                confirmBtn.textContent = 'Served';
+            }
+
+            confirmBtn.onclick = () => updateItemStatus(itemId, newStatus);
+
+            const m = document.getElementById('itemStatusModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeItemStatusModal() {
+            const m = document.getElementById('itemStatusModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        async function updateItemStatus(itemId, newStatus) {
+            closeItemStatusModal();
+            toggleLoader(true);
+            try {
+                const res = await fetch('/api/update_item_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_id: itemId, status: newStatus })
+                });
+                const result = await res.json();
+                toggleLoader(false);
+                if (result.success) {
+                    refreshOccupiedOrders();
+                    showNotice("Success", result.message);
+                } else {
+                    showNotice("Error", result.message);
+                }
+            } catch (err) {
+                toggleLoader(false);
+                showNotice("Error", "Network error updating status.");
+            }
+        }
+
+        function promptManagerAuth() {
+            document.getElementById('managerPassword').value = '';
+            const m = document.getElementById('managerAuthModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeManagerAuthModal() {
+            const m = document.getElementById('managerAuthModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        async function confirmPrintBillAuth() {
+            const pwd = document.getElementById('managerPassword').value;
+            if (!pwd) return showNotice('Required', 'Please enter Manager Password');
+
+            closeManagerAuthModal();
+
+            try {
+                const authRes = await fetch('/api/authorize_manager', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const authData = await authRes.json();
+
+                if (authData.success && currentOccupiedTxId) {
+                    const printRes = await fetch(`/print_prebill/${currentOccupiedTxId}`);
+                    const printData = await printRes.json();
+
+                    if (printData.success) {
+                        showNotice('Success', 'Bill sent to cashier printer.');
+                    } else {
+                        showNotice('Error', 'Failed to print bill.');
+                    }
+                } else {
+                    showNotice('Access Denied', 'Invalid Manager Password.');
+                }
+            } catch (err) {
+                showNotice('Error', 'System error during authorization.');
+            }
+        }
+
+        function promptAddGuest() {
+            document.getElementById('addGuestCount').textContent = '1';
+            document.getElementById('dynamicAddGuestInputs').innerHTML = '';
+            updateAddGuestInputs(1, 0);
+
+            const m = document.getElementById('addGuestModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeAddGuestModal() {
+            const m = document.getElementById('addGuestModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        function changeAddGuestCount(delta) {
+            let countEl = document.getElementById('addGuestCount');
+            let currentVal = parseInt(countEl.textContent) || 0;
+            let newVal = currentVal + delta;
+
+            let maxAdditional = Math.max(0, currentTableCapacity - currentTableTotalGuests);
+
+            if (newVal < 1) {
+                newVal = 1;
+            } else if (newVal > maxAdditional) {
+                showNotice("Table Full", `You can only add ${maxAdditional} more guest(s) to this table.`);
+                newVal = maxAdditional;
+            }
+
+            if (newVal !== currentVal) {
+                countEl.textContent = newVal;
+                updateAddGuestInputs(newVal, currentVal);
+            }
+        }
+
+        function updateAddGuestInputs(newCount, oldCount) {
+            const container = document.getElementById('dynamicAddGuestInputs');
+
+            if (newCount > oldCount) {
+                for (let i = oldCount + 1; i <= newCount; i++) {
+                    const guestNumber = currentTableTotalGuests + i;
+                    const div = document.createElement('div');
+                    div.className = "flex items-center gap-2 mb-2";
+                    div.id = `add_guest_row_${i}`;
+                    div.innerHTML = `
+                        <span class="text-[10px] font-bold text-slate-400 shrink-0 w-12">Guest ${guestNumber}</span>
+                        <input type="text" id="new_add_guest_${i}" placeholder="Optional Name" class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-semibold outline-none focus:border-primary transition-colors">
+                    `;
+                    container.appendChild(div);
+                }
+            } else if (newCount < oldCount) {
+                for (let i = oldCount; i > newCount; i--) {
+                    const row = document.getElementById(`add_guest_row_${i}`);
+                    if (row) row.remove();
+                }
+            }
+        }
+
+        async function submitNewGuest() {
+            const count = parseInt(document.getElementById('addGuestCount').textContent) || 1;
+            let addedGuests = [];
+
+            for (let i = 1; i <= count; i++) {
+                let name = document.getElementById(`new_add_guest_${i}`).value.trim();
+
+                if (!name) {
+                    name = `Guest ${currentTableTotalGuests + i}`;
+                }
+                addedGuests.push(name);
+            }
+
+            closeAddGuestModal();
+            toggleLoader(true);
+
+            try {
+                const response = await fetch('/api/add_guest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction_id: currentOccupiedTxId, guest_names: addedGuests })
+                });
+                const result = await response.json();
+
+                toggleLoader(false);
+
+                if (result.success) {
+                    showNotice('Success', result.message);
+                    refreshOccupiedOrders();
+                } else {
+                    showNotice('Error', result.message);
+                }
+            } catch (error) {
+                toggleLoader(false);
+                showNotice('Error', 'Failed to connect to the server.');
+            }
+        }
+
+        function closeGuestModal() {
+            const m = document.getElementById('guestModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => {
+                m.classList.add('hidden'); m.classList.remove('flex');
+                document.querySelectorAll(".table-group .highlight-ring").forEach(ring => ring.setAttribute('stroke', 'transparent'));
+                selectedTableId = null;
+            }, 200);
+        }
+
+        function updateGuestInputs(newCount, oldCount) {
+            const container = document.getElementById('dynamicGuestInputs');
+
+            if (newCount > oldCount) {
+                for (let i = oldCount + 1; i <= newCount; i++) {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center gap-2 mb-2";
+                    div.id = `guest_row_${i}`;
+                    div.innerHTML = `
+                        <span class="text-[10px] font-bold text-slate-400 shrink-0 w-12">Guest ${i + 1}</span>
+                        <input type="text" id="addl_guest_${i}" placeholder="Optional Name" class="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-semibold outline-none focus:border-primary transition-colors">
+                    `;
+                    container.appendChild(div);
+                }
+            } else if (newCount < oldCount) {
+                for (let i = oldCount; i > newCount; i--) {
+                    const row = document.getElementById(`guest_row_${i}`);
+                    if (row) row.remove();
+                }
+            }
+        }
+
+        function openGuestModal() {
+            document.getElementById('guest-modal-table').textContent = tableData[selectedTableId].name;
+            document.getElementById('primaryGuestName').value = '';
+            document.getElementById('primaryGuestContact').value = '';
+            document.getElementById('primaryGuestEmail').value = '';
+
+            document.getElementById('additionalGuestCount').textContent = '0';
+            document.getElementById('dynamicGuestInputs').innerHTML = '';
+
+            const m = document.getElementById('guestModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function proceedToOrders() {
+            let primaryName = document.getElementById('primaryGuestName').value.trim();
+
+            if (!primaryName) {
+                primaryName = 'Guest';
+            }
+
+            const addlCount = parseInt(document.getElementById('additionalGuestCount').textContent) || 0;
+            let additionalGuests = [];
+
+            for (let i = 1; i <= addlCount; i++) {
+                let name = document.getElementById(`addl_guest_${i}`).value.trim();
+                if (!name) name = `Guest ${i + 1}`;
+                additionalGuests.push(name);
+            }
+
+            currentGuestData = {
+                table_id: selectedTableId,
+                primary_name: primaryName,
+                contact: document.getElementById('primaryGuestContact').value.trim(),
+                email: document.getElementById('primaryGuestEmail').value.trim(),
+                total_guests: 1 + addlCount,
+                additional_guests: additionalGuests
+            };
+
+            const m = document.getElementById('guestModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+
+            currentCart = [];
+            document.getElementById('menu-search').value = '';
+            renderMenu('all');
+            renderCart();
+
+            document.getElementById('floatingSkipBtn').classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('orders-guest-name').textContent = primaryName;
+                document.getElementById('orders-table-no').textContent = tableData[selectedTableId].name;
+
+                const om = document.getElementById('ordersModal');
+                om.classList.remove('hidden'); om.classList.add('flex');
+                setTimeout(() => { om.classList.remove('opacity-0'); om.children[0].classList.remove('scale-95'); }, 10);
+            }, 250);
+        }
+
+        function addMoreOrders() {
+            if (!currentOccupiedTxId) return;
+
+            const guestName = document.getElementById('occ-guest-name').textContent;
+
+            currentGuestData = {
+                transaction_id: currentOccupiedTxId,
+                table_id: selectedTableId,
+                primary_name: guestName
+            };
+
+            const m = document.getElementById('occupiedModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+
+            currentCart = [];
+            document.getElementById('menu-search').value = '';
+            renderMenu('all');
+            renderCart();
+
+            document.getElementById('floatingSkipBtn').classList.add('hidden');
+
+            setTimeout(() => {
+                document.getElementById('orders-guest-name').textContent = guestName;
+                document.getElementById('orders-table-no').textContent = tableData[selectedTableId].name;
+
+                const om = document.getElementById('ordersModal');
+                om.classList.remove('hidden'); om.classList.add('flex');
+                setTimeout(() => { om.classList.remove('opacity-0'); om.children[0].classList.remove('scale-95'); }, 10);
+            }, 250);
+        }
+
+        // ==========================================
+        // 3. AUTO-UPDATE MENU AND LOW STOCK UI
+        // ==========================================
+        async function fetchMenu() {
+            try {
+                const response = await fetch('/api/menu');
+                const result = await response.json();
+                if (result.success) {
+                    menuData = result.menu;
+
+                    const ordersModal = document.getElementById('ordersModal');
+                    if (ordersModal && !ordersModal.classList.contains('hidden')) {
+                        renderMenu(activeCategory);
+                    }
+                }
+            } catch (err) { console.error("Failed to fetch menu", err); }
+        }
+
+        setInterval(fetchMenu, 5000);
+        fetchMenu();
+
+        function renderMenu(category = 'all') {
+            activeCategory = category;
+            const searchInput = document.getElementById('menu-search').value.toLowerCase();
+
+            const categories = [...new Set(menuData.map(item => item.category))];
+            const filterContainer = document.getElementById('category-sidebar');
+
+            let filterHTML = `<button onclick="renderMenu('all')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap lg:whitespace-normal ${category === 'all' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}">All Items</button>`;
+
+            categories.forEach(cat => {
+                const isActive = category === cat;
+                filterHTML += `<button onclick="renderMenu('${cat}')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap lg:whitespace-normal ${isActive ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}">${cat}</button>`;
+            });
+            if (filterContainer) filterContainer.innerHTML = filterHTML;
+
+            const gridContainer = document.getElementById('menu-grid');
+            let itemsToRender = menuData;
+
+            if (category !== 'all') {
+                itemsToRender = itemsToRender.filter(item => item.category === category);
+            }
+            if (searchInput) {
+                itemsToRender = itemsToRender.filter(item => item.menu_name.toLowerCase().includes(searchInput));
+            }
+
+            if (gridContainer) {
+                if (itemsToRender.length === 0) {
+                    gridContainer.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 font-bold text-sm">No items found.</div>`;
+                } else {
+                    gridContainer.innerHTML = itemsToRender.map(item => {
+                        let stockUI = '';
+                        let cardClass = '';
+                        let clickAction = '';
+
+                        if (item.availability <= 0) {
+                            stockUI = `<span class="text-[9px] md:text-[10px] font-bold text-rose-500 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded uppercase truncate">Sold Out</span>`;
+                            cardClass = 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200 grayscale-[0.5]';
+                            clickAction = '';
+                        } else if (item.availability <= 5) {
+                            stockUI = `<span class="text-[9px] md:text-[10px] font-bold text-rose-600 bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded uppercase truncate animate-pulse">${item.availability} Left!</span>`;
+                            cardClass = 'bg-white border border-rose-200 cursor-pointer hover:border-rose-400 hover:shadow-md transition-all active-press';
+                            clickAction = `onclick="openItemConfig(${item.menu_id}, '${item.menu_name.replace(/'/g, "\\'")}', ${item.unit_price}, '${item.type}', ${item.availability})"`;
+                        } else {
+                            stockUI = `<span class="text-[9px] md:text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase truncate">${item.availability} Available</span>`;
+                            cardClass = 'bg-white border border-slate-200 cursor-pointer hover:border-primary hover:shadow-md transition-all active-press';
+                            clickAction = `onclick="openItemConfig(${item.menu_id}, '${item.menu_name.replace(/'/g, "\\'")}', ${item.unit_price}, '${item.type}', ${item.availability})"`;
+                        }
+
+                        return `
+                        <div ${clickAction} class="${cardClass} rounded-xl p-3 flex flex-col justify-between h-28 group">
+                            <p class="text-[11px] md:text-xs font-extrabold text-slate-800 leading-tight group-hover:text-primary transition-colors line-clamp-2">${item.menu_name}</p>
+                            <div class="flex justify-between items-end mt-2">
+                                ${stockUI}
+                                <span class="font-bold text-emerald-600 text-[11px] md:text-xs">₱${item.unit_price.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        function openItemConfig(menuId, name, price, type, avail) {
+            conf_menuId = menuId;
+            conf_name = name;
+            conf_price = price;
+            conf_type = type;
+            conf_avail = avail;
+
+            const existingItem = currentCart.find(i => i.menu_id === menuId);
+
+            document.getElementById('configItemName').textContent = name;
+            document.getElementById('configItemPrice').textContent = `₱${price.toFixed(2)}`;
+
+            document.getElementById('configQty').textContent = existingItem ? existingItem.qty : 1;
+            document.getElementById('configNote').value = existingItem ? existingItem.note : '';
+
+            const isDrinkable = type && (type.toLowerCase().includes('drink') || type.toLowerCase() === 'drinkable');
+            const fireContainer = document.getElementById('configOpenFireContainer');
+
+            if (isDrinkable) {
+                fireContainer.classList.add('hidden');
+                fireContainer.classList.remove('flex');
+                document.getElementById('configOpenFire').checked = false;
+            } else {
+                fireContainer.classList.remove('hidden');
+                fireContainer.classList.add('flex');
+                document.getElementById('configOpenFire').checked = existingItem ? existingItem.openFire : false;
+            }
+
+            document.getElementById('configSaveBtn').textContent = existingItem ? 'Update Item' : 'Add to Orders';
+
+            const m = document.getElementById('itemConfigModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeItemConfigModal() {
+            const m = document.getElementById('itemConfigModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        function changeConfigQty(delta) {
+            let qtyEl = document.getElementById('configQty');
+            let currentVal = parseInt(qtyEl.textContent) || 0;
+            let newVal = currentVal + delta;
+
+            if (newVal < 0) newVal = 0;
+            if (newVal > conf_avail) {
+                showNotice("Stock Limit", `Only ${conf_avail} available.`);
+                return;
+            }
+            qtyEl.textContent = newVal;
+        }
+
+        function saveItemConfig() {
+            const finalQty = parseInt(document.getElementById('configQty').textContent) || 0;
+            const finalNote = document.getElementById('configNote').value.trim();
+            const finalOpenFire = document.getElementById('configOpenFire').checked;
+
+            const itemIndex = currentCart.findIndex(i => i.menu_id === conf_menuId);
+
+            if (finalQty === 0) {
+                if (itemIndex > -1) currentCart.splice(itemIndex, 1);
+            } else {
+                if (itemIndex > -1) {
+                    currentCart[itemIndex].qty = finalQty;
+                    currentCart[itemIndex].note = finalNote;
+                    currentCart[itemIndex].openFire = finalOpenFire;
+                } else {
+                    currentCart.push({
+                        menu_id: conf_menuId,
+                        name: conf_name,
+                        unit_price: conf_price,
+                        type: conf_type,
+                        qty: finalQty,
+                        note: finalNote,
+                        openFire: finalOpenFire
+                    });
+                }
+            }
+
+            closeItemConfigModal();
+            renderCart();
+
+            if (!document.getElementById('cartSummaryModal').classList.contains('hidden')) {
+                renderCartSummaryItems();
+            }
+        }
+
+        function renderCart() {
+            const fab = document.getElementById('floatingCartBtn');
+            const countUI = document.getElementById('floatingCartCount');
+            const totalUI = document.getElementById('floatingCartTotal');
+
+            if (currentCart.length === 0) {
+                fab.classList.add('hidden');
+            } else {
+                fab.classList.remove('hidden');
+
+                let total = 0;
+                let itemCount = 0;
+
+                currentCart.forEach(item => {
+                    total += (item.qty * item.unit_price);
+                    itemCount += item.qty;
+                });
+
+                countUI.textContent = itemCount;
+                totalUI.textContent = `₱${total.toFixed(2)}`;
+            }
+        }
+
+        function openCartModal() {
+            renderCartSummaryItems();
+            const m = document.getElementById('cartSummaryModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeCartModal() {
+            const m = document.getElementById('cartSummaryModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        function renderCartSummaryItems() {
+            const container = document.getElementById('summary-cart-items');
+
+            if (currentCart.length === 0) {
+                container.innerHTML = `
+                    <div class="h-40 flex flex-col items-center justify-center text-slate-400 opacity-60">
+                        <i class="fa-solid fa-basket-shopping text-3xl mb-2"></i>
+                        <p class="text-xs font-bold uppercase tracking-wider">Cart is Empty</p>
+                    </div>`;
+                document.getElementById('summary-cart-total').textContent = '₱0.00';
+
+                setTimeout(closeCartModal, 500);
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = currentCart.map(item => {
+                const itemTotal = item.qty * item.unit_price;
+                total += itemTotal;
+
+                const menuRef = menuData.find(m => m.menu_id === item.menu_id);
+                const maxStock = menuRef ? menuRef.availability : 99;
+
+                const noteUI = item.note ? `<p class="text-[10px] text-slate-500 italic mt-0.5 max-w-[80%] truncate"><i class="fa-solid fa-note-sticky mr-1"></i>${item.note}</p>` : '';
+                const fireUI = item.openFire ? `<span class="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">Open Fire</span>` : '';
+
+                return `
+                <div onclick="openItemConfig(${item.menu_id}, '${item.name.replace(/'/g, "\\'")}', ${item.unit_price}, '${item.type}', ${maxStock})" class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:border-primary transition-all group shadow-sm">
+                    <div class="flex items-start gap-3 w-[70%]">
+                        <span class="bg-white text-slate-600 font-extrabold text-xs px-2 py-1 border border-slate-200 rounded-md mt-0.5">${item.qty}x</span>
+                        <div class="flex flex-col w-full">
+                            <span class="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">${item.name}</span>
+                            ${noteUI}
+                            <div class="mt-1">${fireUI}</div>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-sm font-bold text-slate-700">₱${itemTotal.toFixed(2)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('summary-cart-total').textContent = `₱${total.toFixed(2)}`;
+        }
+
+        function promptSendOrder() {
+            if (currentCart.length === 0) {
+                showNotice("Cart Empty", "Please add at least one item before sending orders.");
+                return;
+            }
+            const m = document.getElementById('confirmOrderModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeConfirmOrderModal() {
+            const m = document.getElementById('confirmOrderModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        // ==========================================
+        // 4. AUTO-LOGOUT AFTER ORDER CONFIRMATION
+        // ==========================================
+        async function executeFinalOrder() {
+            closeConfirmOrderModal();
+
+            currentCart.forEach(item => {
+                const isDrinkable = item.type && (item.type.toLowerCase().includes('drink') || item.type.toLowerCase() === 'drinkable');
+                if (isDrinkable) {
+                    item.status = 'preparing';
+                } else {
+                    item.status = item.openFire ? 'preparing' : 'pending';
+                }
+            });
+
+            const payload = {
+                ...currentGuestData,
+                cart: currentCart,
+                waiter_name: '{{ session.name | default("Waiter") }}'
+            };
+
+            closeCartModal();
+            closeOrdersModal();
+            toggleLoader(true);
+
+            try {
+                const response = await fetch('/api/place_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                toggleLoader(false);
+
+                if (result.success) {
+                    currentGuestData = {}; currentCart = [];
+                    renderCart();
+                    initFloorplan();
+                    fetchMenu();
+
+                    showNotice(
+                        "Orders Sent!",
+                        "Order successfully sent to kitchen/bar. You will be logged out automatically for safety.",
+                        () => {
+                            confirmLogout();
+                        }
+                    );
+                } else {
+                    showNotice("Error", result.message);
+                }
+            } catch (error) {
+                toggleLoader(false);
+                showNotice("Connection Error", "Failed to connect to the server.");
+            }
+        }
+
+        function closeOrdersModal() {
+            const m = document.getElementById('ordersModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => {
+                m.classList.add('hidden'); m.classList.remove('flex');
+                document.querySelectorAll(".table-group .highlight-ring").forEach(ring => ring.setAttribute('stroke', 'transparent'));
+                selectedTableId = null;
+            }, 200);
+        }
+
+        function openLogoutModal() {
+            const m = document.getElementById('logoutModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeLogoutModal() {
+            const m = document.getElementById('logoutModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+        }
+
+        function confirmLogout() {
+            closeLogoutModal();
+            setTimeout(() => {
+                fetch('/logout').then(response => { if (response.redirected) window.location.href = response.url; });
+            }, 250);
+        }
+
+        window.onload = () => {
+            initFloorplan();
+            fetchMenu();
+        };
+
+        function confirmSkipOrders() {
+            if (currentCart.length > 0) {
+                // Kung may napindot na silang order tapos nag skip, magwa-warning tayo
+                showNotice("Discard Cart?", "You have items in your cart. Skipping will discard these items and only occupy the table.", () => {
+                    executeSkipOrders();
+                });
+            } else {
+                executeSkipOrders();
+            }
+        }
+
+        async function executeSkipOrders() {
+            toggleLoader(true);
+            const payload = {
+                ...currentGuestData,
+                waiter_name: '{{ session.name | default("Waiter") }}'
+            };
+
+            try {
+                // Gagawa tayo ng bagong route sa app.py para dito
+                const response = await fetch('/api/occupy_table_only', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                toggleLoader(false);
+
+                if (result.success) {
+                    closeOrdersModal();
+                    currentGuestData = {};
+                    currentCart = [];
+                    renderCart();
+                    initFloorplan(); // I-refresh ang tables para maging Occupied kulay
+                    showNotice("Table Occupied", "The table has been successfully reserved for the guests.");
+                } else {
+                    showNotice("Error", result.message);
+                }
+            } catch (err) {
+                toggleLoader(false);
+                showNotice("Connection Error", "Failed to connect to the server.");
+            }
+        }
+
+        // GLOBAL CONFIRMATION LOGIC
+        let currentConfirmCallback = null;
+
+        function showConfirm(title, message, callback, isDestructive = true) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            currentConfirmCallback = callback;
+
+            const btn = document.getElementById('confirmActionBtn');
+            const iconBg = document.getElementById('confirmIconBg');
+            const icon = document.getElementById('confirmIcon');
+
+            // Kung destructive (tulad ng Cancel/Void), magiging Pula. Kung hindi, magiging Kulay Primary (Blue).
+            if (isDestructive) {
+                btn.className = "w-1/2 bg-rose-500 hover:bg-rose-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-rose-500/30 transition-all active-press";
+                iconBg.className = "w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5";
+                icon.className = "fa-solid fa-triangle-exclamation text-3xl";
+            } else {
+                btn.className = "w-1/2 bg-primary hover:bg-primaryDark text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press";
+                iconBg.className = "w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-5";
+                icon.className = "fa-solid fa-circle-question text-3xl";
+            }
+
+            const m = document.getElementById('confirmModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.remove('opacity-0'); m.children[0].classList.remove('scale-95'); }, 10);
+        }
+
+        function closeConfirm() {
+            const m = document.getElementById('confirmModal');
+            m.classList.add('opacity-0'); m.children[0].classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); currentConfirmCallback = null; }, 200);
+        }
+
+        function proceedConfirm() {
+            if (currentConfirmCallback) {
+                currentConfirmCallback(); // Tatawagin nito yung specific function mo (executeCancelTransaction)
+            }
+            closeConfirm();
+        }
+
+        function confirmCancelTransaction() {
+            // Gamitin ang bago nating showConfirm (Title, Message, Function na tatakbo pag nag 'Yes', at kung Destructive ba)
+            showConfirm(
+                "Cancel Guest?",
+                "Are you sure you want to cancel this reservation?\n\nThe transaction will be cancelled and the table will be marked as vacant.",
+                () => {
+                    executeCancelTransaction(); // Tatakbo lang ito kapag pinindot ang Yes, Proceed
+                },
+                true // True para maging kulay pula yung icon at button
+            );
+        }
+
+        async function executeCancelTransaction() {
+            toggleLoader(true);
+            try {
+                const response = await fetch('/api/cancel_transaction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction_id: currentOccupiedTxId })
+                });
+                const result = await response.json();
+
+                toggleLoader(false);
+
+                if (result.success) {
+                    closeOccupiedModal();
+                    initFloorplan(); // I-refresh ang tables para maging green/vacant ulit
+
+                    // Ipakita ang success notice (walang 3rd parameter callback kaya normal "OK" button lang)
+                    showNotice('Cancelled', 'Transaction cancelled and table is now vacant.');
+                } else {
+                    showNotice('Error', result.message);
+                }
+            } catch (error) {
+                toggleLoader(false);
+                showNotice('Error', 'Failed to connect to the server.');
+            }
+        }
+    </script>
+</body>
+
+</html>

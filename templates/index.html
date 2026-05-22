@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Table Management System</title>
+    <link rel="icon" href="https://blueoceanbar.com/wp-content/uploads/2025/09/BOB-Logo_White-150x150.png"
+        sizes="32x32">
+</head>
+
+<body
+    class="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-100 via-white to-blue-50 min-h-[100dvh] flex flex-col justify-center items-center py-8 px-4 overflow-y-auto">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+
+    <div
+        class="relative w-full max-w-sm p-6 sm:p-8 rounded-2xl border border-white/80 bg-white/60 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] fade-in">
+        <div class="text-center mb-6 sm:mb-8 flex flex-col justify-center items-center">
+            
+            <svg class="w-24 h-24 sm:w-28 sm:h-28 mb-4 drop-shadow-md hover:scale-105 transition-transform duration-300" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="url(#bg-gradient)" opacity="0.3"/>
+                
+                <rect x="15" y="15" width="25" height="25" rx="6" fill="#fb923c" stroke="#ea580c" stroke-width="2"/>
+                <circle cx="27.5" cy="8" r="4" fill="#fdba74"/>
+                <circle cx="8" cy="27.5" r="4" fill="#fdba74"/>
+                
+                <rect x="60" y="15" width="25" height="25" rx="6" fill="#4ade80" stroke="#16a34a" stroke-width="2"/>
+                <circle cx="72.5" cy="8" r="4" fill="#86efac"/>
+                <circle cx="92" cy="27.5" r="4" fill="#86efac"/>
+
+                <rect x="15" y="60" width="25" height="25" rx="6" fill="#60a5fa" stroke="#2563eb" stroke-width="2"/>
+                <circle cx="27.5" cy="92" r="4" fill="#93c5fd"/>
+                <circle cx="8" cy="72.5" r="4" fill="#93c5fd"/>
+
+                <rect x="60" y="60" width="25" height="25" rx="6" fill="#c084fc" stroke="#9333ea" stroke-width="2"/>
+                <circle cx="72.5" cy="92" r="4" fill="#d8b4fe"/>
+                <circle cx="92" cy="72.5" r="4" fill="#d8b4fe"/>
+
+                <circle cx="50" cy="50" r="14" fill="url(#bar-gradient)" stroke="#db2777" stroke-width="2.5" class="animate-pulse"/>
+
+                <defs>
+                    <radialGradient id="bg-gradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 50) rotate(90) scale(45)">
+                        <stop stop-color="#38bdf8"/>
+                        <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="bar-gradient" x1="36" y1="36" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#f472b6"/>
+                        <stop offset="1" stop-color="#e879f9"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            <p class="text-slate-500 text-xs sm:text-sm mt-1 sm:mt-2 font-medium">Table Management System</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4 sm:space-y-5">
+
+            <div class="flex bg-slate-100 p-1 rounded-xl mb-2">
+                <button type="button" id="tabWaiter" onclick="setLoginMode('waiter')"
+                    class="flex-1 py-2.5 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all">Waiter</button>
+                <button type="button" id="tabManagement" onclick="setLoginMode('management')"
+                    class="flex-1 py-2.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Cashier
+                    & Manager</button>
+            </div>
+
+            <div class="relative group">
+                <label
+                    class="block mb-1 sm:mb-2 text-[10px] sm:text-xs font-semibold text-blue-600 uppercase tracking-wider">Employee
+                    ID</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" id="employee_id" value="EMP" required placeholder="e.g. BOB-2026-XXXX"
+                        class="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm">
+                </div>
+            </div>
+
+            <div id="passwordContainer" class="relative group hidden">
+                <label
+                    class="block mb-1 sm:mb-2 text-[10px] sm:text-xs font-semibold text-blue-600 uppercase tracking-wider">Password</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="password" id="password" placeholder="••••••••"
+                        class="w-full pl-10 pr-12 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm">
+
+                    <button type="button" onclick="togglePassword()"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-blue-500">
+                        <svg id="eyeIcon" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full mt-4 sm:mt-6 py-3 sm:py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition-all transform active:scale-95">
+                Access Terminal
+            </button>
+        </form>
+    </div>
+
+    <div class="mt-8 text-slate-400 text-xs sm:text-sm font-medium tracking-wide fade-in opacity-80">
+        Developed by <span class="text-blue-500 font-bold">ArjunrenVon</span>
+    </div>
+
+    <div id="errorModal"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-slate-900/40 backdrop-blur-sm transition-opacity px-4">
+        <div
+            class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 transform transition-all scale-95">
+            <div
+                class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-base sm:text-lg font-bold text-center text-slate-800">Access Denied</h3>
+            <p id="modalErrorMessage" class="text-xs sm:text-sm text-center text-slate-500 mt-2">Invalid username or
+                password. Please try again.</p>
+            <button onclick="closeModal()"
+                class="w-full mt-4 sm:mt-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors text-sm sm:text-base">
+                Try Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Setup Login Modes
+        function setLoginMode(mode) {
+            const pwContainer = document.getElementById('passwordContainer');
+            const pwInput = document.getElementById('password');
+            const tabWaiter = document.getElementById('tabWaiter');
+            const tabManagement = document.getElementById('tabManagement');
+
+            if (mode === 'waiter') {
+                tabWaiter.className = "flex-1 py-2.5 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
+                tabManagement.className = "flex-1 py-2.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+                pwContainer.classList.add('hidden');
+                pwInput.required = false;
+                pwInput.value = ''; // Clear out the password
+            } else {
+                tabManagement.className = "flex-1 py-2.5 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
+                tabWaiter.className = "flex-1 py-2.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+                pwContainer.classList.remove('hidden');
+                pwInput.required = true;
+            }
+        }
+
+        // Default to Waiter view
+        document.addEventListener('DOMContentLoaded', () => setLoginMode('waiter'));
+
+        function togglePassword() {
+            const pwInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            if (pwInput.type === 'password') {
+                pwInput.type = 'text';
+                eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7
+                a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878
+                l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+            `;
+            } else {
+                pwInput.type = 'password';
+                eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            `;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('modalErrorMessage').innerText = message;
+            document.getElementById('errorModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('errorModal').classList.add('hidden');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const employee_id = document.getElementById('employee_id').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/floatingbar/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employee_id, password }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    sessionStorage.setItem('employee_id', employee_id);
+                    sessionStorage.setItem('position', result.position.toLowerCase());
+                    sessionStorage.setItem('name', result.name);
+                    window.location.href = result.redirect_url;
+                } else {
+                    showError(result.message || 'The credentials you entered are incorrect.');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Unable to connect to the server.');
+            }
+        });
+    </script>
+</body>
+
+</html>

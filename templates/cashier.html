@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Management System - Cashier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="icon" href="https://blueoceanbar.com/wp-content/uploads/2025/09/BOB-Logo_White-150x150.png"
+        sizes="32x32">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], },
+                    colors: { primary: '#1cb2b6', primaryDark: '#17989b', }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .active-press:active {
+            transform: scale(0.95);
+            transition: transform 0.05s;
+        }
+
+        .table-group:hover .highlight-ring,
+        .table-group:active .highlight-ring {
+            stroke: #cbd5e1 !important;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1cb2b6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#f1f5f9] text-slate-800 h-screen w-full m-0 p-0 overflow-hidden flex flex-col">
+
+    <div class="w-full h-screen flex flex-col lg:flex-row p-4 gap-4 relative">
+        <div class="flex-1 flex flex-col gap-4 overflow-hidden">
+            <div
+                class="bg-white rounded-2xl border border-slate-200 p-5 flex justify-between items-center shadow-sm shrink-0 relative overflow-hidden">
+                <div
+                    class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none">
+                </div>
+
+                <div class="relative z-10 flex flex-col">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">Dashboard</h1>
+
+                        <span
+                            class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide flex items-center gap-1.5 shadow-sm">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Table Management System
+                        </span>
+
+                        {% if shift_status == 'Open' %}
+                        <span
+                            class="bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wide flex items-center gap-1.5 shadow-sm ml-2">
+                            <i class="fa-solid fa-lock-open"></i> Shift Open
+                        </span>
+                        {% else %}
+                        <span
+                            class="bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wide flex items-center gap-1.5 shadow-sm ml-2">
+                            <i class="fa-solid fa-lock"></i> Shift Closed
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm font-medium text-slate-500">Welcome back, <span
+                            class="text-slate-700 font-bold">{{ session.name | default('Cashier') }}</span>! Here is
+                        your table status</p>
+                </div>
+
+                <div class="relative z-10 flex items-center gap-3 md:gap-4">
+                    <div
+                        class="hidden md:flex flex-col items-end bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100">
+                        <div class="text-xs font-bold text-slate-700" id="live-date">--</div>
+                        <div class="text-[10px] font-semibold text-slate-500 mt-0.5" id="live-time">--</div>
+                    </div>
+                    <div class="hidden sm:block w-px h-8 bg-slate-200 mx-1"></div>
+                    <button
+                        class="flex items-center gap-3 pl-2 pr-1 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-full transition-all shadow-sm active-press">
+                        <div class="text-right hidden sm:block pl-3">
+                            <p id="waiteruser" class="text-xs font-bold text-slate-800 leading-none">{{ session.name |
+                                default('Cashier') }}</p>
+                            <p class="text-[10px] uppercase text-slate-500 font-medium mt-1">Cashier</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
+                            <img src="{{ url_for('static', filename='icon.png') }}"
+                                onerror="this.src='https://blueoceanbar.com/wp-content/uploads/2025/09/BOB-Logo_White-150x150.png';"
+                                class="w-full h-full object-cover">
+                        </div>
+                    </button>
+                    <button onclick="window.location.reload()" title="Refresh System"
+                        class="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-blue-50 border border-slate-200 text-slate-400 hover:text-blue-500 transition-colors shadow-sm active-press ml-1 md:ml-2">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                    <button onclick="openModal('logoutModal')" title="Log out"
+                        class="w-10 h-10 flex items-center justify-center rounded-full bg-white hover:bg-rose-50 border border-slate-200 text-slate-400 hover:text-rose-500 transition-colors shadow-sm active-press ml-1 md:ml-2">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-2 gap-4 shrink-0">
+                <div
+                    class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-center items-center shadow-sm relative overflow-hidden group hover:border-primary/50 transition-colors">
+                    <div
+                        class="absolute -right-4 -bottom-4 text-slate-50 opacity-50 group-hover:text-primary/5 transition-colors">
+                        <i class="fa-solid fa-users text-7xl"></i>
+                    </div>
+                    <span class="text-3xl font-extrabold text-slate-800 mb-1 relative z-10">{{ total_guests }}</span>
+                    <span
+                        class="text-[10px] font-bold text-slate-500 uppercase tracking-wide text-center relative z-10">Total
+                        Active Guests</span>
+                </div>
+                <div
+                    class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-center items-center shadow-sm relative overflow-hidden group hover:border-primary/50 transition-colors">
+                    <div
+                        class="absolute -right-4 -bottom-4 text-slate-50 opacity-50 group-hover:text-primary/5 transition-colors">
+                        <i class="fa-solid fa-layer-group text-7xl"></i>
+                    </div>
+                    <span class="text-3xl font-extrabold text-slate-800 mb-1 relative z-10">{{ main_deck_count }}</span>
+                    <span
+                        class="text-[10px] font-bold text-slate-500 uppercase tracking-wide text-center relative z-10">Occupied
+                        Tables</span>
+                </div>
+            </div>
+
+            <div
+                class="bg-white rounded-2xl border border-slate-200 flex flex-col flex-1 overflow-hidden shadow-sm p-4">
+
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 shrink-0 gap-3">
+                    <div class="flex bg-slate-100 p-1 rounded-xl w-fit shrink-0">
+                        <button onclick="switchView('table')" id="btn-view-table"
+                            class="px-5 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-primary">
+                            <i class="fa-solid fa-table-list mr-1.5"></i> Table View
+                        </button>
+                        <button onclick="switchView('map')" id="btn-view-map"
+                            class="px-5 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700">
+                            <i class="fa-solid fa-map-location-dot mr-1.5"></i> Map View
+                        </button>
+                    </div>
+
+                    <div id="searchContainer"
+                        class="w-full md:max-w-md border border-slate-300 rounded-xl overflow-hidden flex items-center px-4 bg-slate-50 focus-within:bg-white focus-within:border-primary/50 transition-colors">
+                        <i class="fa-solid fa-search text-slate-400 mr-2"></i>
+                        <input type="text" id="searchInput" placeholder="Search Customer name, table, etc."
+                            class="w-full py-2.5 outline-none text-sm text-slate-700 bg-transparent font-medium placeholder-slate-400">
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-hidden relative flex flex-col">
+                    <div id="view-table" class="flex-1 overflow-y-auto custom-scrollbar pr-2 block h-full">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white z-10">
+                                <tr
+                                    class="border-b-2 border-slate-100 text-[10px] uppercase tracking-wider text-slate-400">
+                                    <th class="py-3 px-2 font-extrabold">Guest Name</th>
+                                    <th class="py-3 px-2 font-extrabold">Contact No.</th>
+                                    <th class="py-3 px-2 font-extrabold">Guest Email</th>
+                                    <th class="py-3 px-2 font-extrabold">Guest Count</th>
+                                    <th class="py-3 px-2 font-extrabold">Status</th>
+                                    <th class="py-3 px-2 font-extrabold">Date & Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="text-sm">
+                                {% if transactions %}
+                                {% for txn in transactions %}
+                                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer table-item"
+                                    onclick="loadTransactionDetails('{{ txn.id }}')">
+                                    <td class="py-3 px-2">
+                                        <p class="font-extrabold text-slate-800">{{ txn.guest_name }}</p>
+                                        <p class="text-[10px] font-bold text-primary">{{ txn.assigned_tables or 'No
+                                            Table' }}</p>
+                                    </td>
+                                    <td class="py-3 px-2 font-medium text-slate-500">{{ txn.contact_number or '--' }}
+                                    </td>
+                                    <td class="py-3 px-2 font-medium text-slate-500">{{ txn.guest_email or '--' }}</td>
+                                    <td class="py-3 px-2 font-extrabold text-slate-700">{{ txn.guest_count }}</td>
+                                    <td class="py-3 px-2">
+                                        <span
+                                            class="bg-emerald-100 text-emerald-600 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide">{{
+                                            txn.status }}</span>
+                                    </td>
+                                    <td class="py-3 px-2 font-medium text-slate-500">{{ txn.created_at.strftime('%b %d,
+                                        %Y %I:%M %p') if txn.created_at else '--' }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-slate-400 font-medium">No open
+                                        transactions available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="view-map"
+                        class="flex-1 hidden overflow-hidden relative bg-[#fafafa] rounded-2xl border border-slate-100">
+                        <div class="absolute inset-0">
+                            <svg id="svgCanvasDash" width="100%" height="100%" viewBox="0 0 1000 800"
+                                preserveAspectRatio="xMidYMid meet">
+                                <image id="floorplan-bg-dash" x="0" y="0" width="100%" height="100%"
+                                    preserveAspectRatio="xMidYMid slice" href=""></image>
+                                <g id="dynamic-elements-dash"></g>
+                                <g id="dynamic-tables-dash"></g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="w-full lg:w-[400px] shrink-0 bg-white lg:rounded-2xl border border-slate-200 flex flex-col overflow-hidden shadow-sm relative">
+            <div id="sidebar-empty-view"
+                class="flex flex-col items-center justify-center flex-grow w-full p-8 text-center bg-slate-50/50 z-10">
+                <img src="{{ url_for('static', filename='icon.png') }}"
+                    onerror="this.src='https://blueoceanbar.com/wp-content/uploads/2025/09/BOB-Logo_White-150x150.png';"
+                    alt="Blue Ocean Bar" class="w-40 object-contain mb-4 opacity-40 drop-shadow-sm grayscale">
+                <p class="text-sm font-extrabold text-slate-600">No Transaction Selected</p>
+                <p class="text-xs text-slate-400 mt-1 font-medium">Click a guest in the table to view details.</p>
+            </div>
+
+            <div id="sidebar-active-view" class="hidden flex-col w-full flex-grow overflow-hidden relative z-0">
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                    <div class="flex-1 pr-3 overflow-hidden">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="font-extrabold text-lg text-slate-800 tracking-tight leading-none truncate"
+                                id="pos-customer-name">--</h3>
+                            <span id="pos-table-no"
+                                class="bg-teal-50 text-teal-600 border border-teal-200 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap hidden sm:block">--</span>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-500 mt-1 truncate" id="pos-txn-code">--</p>
+                    </div>
+
+                    <div class="relative shrink-0">
+                        <button onclick="toggleActionsMenu()"
+                            class="bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 active-press">
+                            Actions <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div id="actionsDropdown"
+                            class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden z-[100] transform origin-top-right transition-all">
+                            <button onclick="handleMultipleTable()"
+                                class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors border-b border-slate-50 flex items-center gap-3">
+                                <i class="fa-solid fa-object-group text-slate-400 w-4 text-center"></i> Add Multiple
+                                Table
+                            </button>
+                            <button onclick="handleTransferTable()"
+                                class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors border-b border-slate-50 flex items-center gap-3">
+                                <i class="fa-solid fa-arrow-right-arrow-left text-slate-400 w-4 text-center"></i>
+                                Transfer Table
+                            </button>
+                            <button onclick="handleMergeTable()"
+                                class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors border-b border-slate-50 flex items-center gap-3">
+                                <i class="fa-solid fa-code-merge text-slate-400 w-4 text-center"></i> Merge Tables
+                            </button>
+                            <button onclick="openSeparateCheckModal()"
+                                class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors flex items-center gap-3">
+                                <i class="fa-solid fa-person-walking-arrow-right text-slate-400 w-4 text-center"></i>
+                                Separate Check
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-5 flex-grow overflow-y-auto space-y-4 custom-scrollbar bg-white" id="pos-items-container">
+                </div>
+
+                <div
+                    class="p-5 bg-white border-t border-slate-200 mt-auto shrink-0 relative shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.03)] z-20">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Subtotal</span>
+                        <span class="text-sm font-bold text-slate-600" id="pos-subtotal">₱ 0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Service Charge (10%)</span>
+                        <span class="text-sm font-bold text-slate-600" id="pos-sc">₱ 0.00</span>
+                    </div>
+                    <div
+                        class="flex justify-between items-center bg-emerald-50 p-3 rounded-xl border border-emerald-100 mb-4">
+                        <span class="text-xs font-bold text-emerald-700 uppercase">Grand Total</span>
+                        <span class="text-xl font-black text-emerald-700" id="pos-grandtotal">₱ 0.00</span>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="handlePreBill()"
+                            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition-all active-press text-sm border border-slate-200">Pre
+                            Bill</button>
+                        <button onclick="handlePaymentClick()"
+                            class="flex-1 bg-primary hover:bg-primaryDark text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press text-sm">Payment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="separateCheckModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[250] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 flex flex-col modal-content max-h-[90vh]">
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Separate Check</h2>
+            <p class="text-sm font-medium text-slate-500 mb-4">Select items to move to a new transaction for early
+                payment.</p>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Guest Name (Early Leaver)</label>
+                <div class="relative flex gap-2">
+                    <input type="text" id="scGuestName" placeholder="Type name or select..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-primary transition-colors">
+                    <button type="button" onclick="openGuestSelectionModal()"
+                        class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap active-press shadow-sm">
+                        <i class="fa-solid fa-list-ul mr-1"></i> Select Guest
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="flex-grow overflow-y-auto custom-scrollbar mb-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <div id="scItemsList" class="space-y-2"></div>
+            </div>
+
+            <div class="flex gap-3 shrink-0">
+                <button onclick="closeModal('separateCheckModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Cancel</button>
+                <button onclick="executeSeparateCheck()"
+                    class="w-1/2 bg-primary hover:bg-primaryDark text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press">Separate
+                    & Pay</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="guestSelectionModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[260] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-6 flex flex-col modal-content max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <h2 class="text-lg font-extrabold text-slate-800">Select Guest</h2>
+                <button onclick="closeModal('guestSelectionModal')"
+                    class="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-grow overflow-y-auto custom-scrollbar space-y-2 pr-1" id="guestSelectionList">
+            </div>
+        </div>
+    </div>
+
+    <div id="splitBillModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[255] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform flex flex-col modal-content">
+            <div
+                class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white shrink-0 z-10 shadow-sm">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-800">Split Bill Dashboard</h2>
+                    <p class="text-xs font-medium text-slate-500">Manage multiple payments for <span id="sbGuestName"
+                            class="font-bold text-primary">Guest</span></p>
+                </div>
+                <button onclick="closeModal('splitBillModal')"
+                    class="text-slate-400 hover:bg-slate-100 p-2.5 rounded-full"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="flex-1 flex overflow-hidden bg-slate-50">
+                <div class="flex-1 flex flex-col p-6 overflow-hidden">
+                    <div class="flex gap-2 mb-4 p-1 bg-slate-200/60 rounded-xl shrink-0">
+                        <button onclick="setSplitMode('amount')" id="tabAmount"
+                            class="flex-1 py-2.5 font-bold rounded-lg bg-white shadow-sm text-primary transition-all">Split
+                            By Amount</button>
+                        <button onclick="setSplitMode('items')" id="tabItems"
+                            class="flex-1 py-2.5 font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Split
+                            By Items</button>
+                    </div>
+
+                    <div id="splitToolbarAmount"
+                        class="mb-4 bg-white p-3 rounded-xl border border-slate-200 shrink-0 shadow-sm transition-all">
+                        <label class="flex items-center gap-2 cursor-pointer select-none w-max">
+                            <input type="checkbox" id="cbDivideEqually" onchange="toggleDivideEqually(this.checked)"
+                                class="accent-primary w-4 h-4 cursor-pointer">
+                            <span class="text-sm font-bold text-slate-700">Divide Equally (By Guests)</span>
+                        </label>
+                        <div id="divideEquallyGuests"
+                            class="hidden flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+                        </div>
+                    </div>
+
+                    <div id="splitsContainer" class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar"></div>
+
+                    <button onclick="addSplit()"
+                        class="mt-4 w-full py-3.5 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:bg-slate-100 hover:border-slate-400 hover:text-slate-700 transition-all shrink-0 active-press">
+                        <i class="fa-solid fa-plus mr-2"></i> Add Custom Split
+                    </button>
+                </div>
+
+                <div class="w-1/3 bg-white border-l border-slate-200 p-6 flex flex-col shrink-0">
+                    <h3 class="text-lg font-extrabold text-slate-800 mb-6 flex items-center gap-2"><i
+                            class="fa-solid fa-chart-pie text-primary"></i> Split Summary</h3>
+
+                    <div class="mb-4 pb-4 border-b border-slate-200">
+                        <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Apply Voucher
+                            (Global)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="sbVoucherCode" placeholder="VOUCHER CODE"
+                                class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none uppercase font-bold text-slate-700">
+                            <button onclick="applySplitVoucher()"
+                                class="bg-primary hover:bg-primaryDark text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active-press">Apply</button>
+                        </div>
+                        <p id="sbUI_VoucherStatus" class="text-[9px] font-bold text-slate-400 mt-1">Not applied</p>
+                    </div>
+
+                    <div class="space-y-2 flex-1">
+                        <div
+                            class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Items Subtotal</span>
+                            <span id="ssSubtotal" class="font-bold text-slate-800">₱0.00</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Service Charge (10%)</span>
+                            <span id="ssSC" class="font-bold text-slate-800">₱0.00</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center p-3 bg-rose-50 rounded-xl border border-rose-100 text-rose-600">
+                            <span class="text-xs font-bold uppercase">Total Discounts</span>
+                            <span id="ssDiscounts" class="font-bold">-₱0.00</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center p-4 bg-emerald-50 rounded-xl border border-emerald-200 shadow-inner mt-4">
+                            <span class="text-sm font-black text-emerald-700 uppercase">Final Net Payable</span>
+                            <span id="ssNetPayable" class="font-black text-emerald-700 text-xl">₱0.00</span>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-200">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Gross Allocated</span>
+                                <span id="ssAllocatedGross" class="text-xs font-bold text-slate-600">₱0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Unallocated Gross</span>
+                                <span id="ssUnallocatedGross" class="text-sm font-black text-rose-500">₱0.00</span>
+                            </div>
+                            <p id="ssWarning" class="text-[10px] text-rose-500 font-bold mt-2 hidden"><i
+                                    class="fa-solid fa-triangle-exclamation mr-1"></i> Allocation must match Subtotal +
+                                SC</p>
+                        </div>
+                    </div>
+
+                    <button onclick="submitAllSplits()" id="btnSubmitSplits"
+                        class="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg transition-all opacity-50 cursor-not-allowed"
+                        disabled>
+                        Review & Complete <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmSplitSummaryModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[290] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 flex flex-col modal-content">
+            <div
+                class="w-14 h-14 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border-4 border-indigo-100">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1 text-center">Confirm Split Breakdown</h2>
+            <p class="text-sm font-medium text-slate-500 mb-6 text-center">Review the split details before processing
+                payments.</p>
+
+            <div
+                class="flex-grow overflow-y-auto max-h-[40vh] custom-scrollbar mb-4 border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-sm">
+                    <thead
+                        class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0">
+                        <tr>
+                            <th class="p-3 font-bold">Split Name</th>
+                            <th class="p-3 font-bold text-center">Method</th>
+                            <th class="p-3 font-bold text-right">Discount</th>
+                            <th class="p-3 font-bold text-right">Net Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cssTableBody" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+
+            <div
+                class="flex justify-between items-center bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 mb-6">
+                <span class="text-xs uppercase font-bold tracking-wider">Total Collection</span>
+                <span id="cssTotalNet" class="text-xl font-black">₱0.00</span>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('confirmSplitSummaryModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Edit
+                    Splits</button>
+                <button onclick="executeSubmitSplits()"
+                    class="w-1/2 bg-primary hover:bg-primaryDark text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press">Process
+                    Payments</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="loadingModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 transition-opacity opacity-0">
+        <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center">
+            <div class="loader mb-4"></div>
+            <p class="text-sm font-bold text-slate-700">Processing...</p>
+        </div>
+    </div>
+
+    <div id="alertModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[400] hidden items-center justify-center p-4 transition-opacity opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 p-8 text-center transform scale-95 transition-transform alert-content">
+            <div id="alertIcon"
+                class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl border-4"></div>
+            <h2 id="alertTitle" class="text-xl font-extrabold text-slate-800 mb-2">Notice</h2>
+            <p id="alertMessage" class="text-sm font-medium text-slate-500 mb-8">Message.</p>
+            <button onclick="closeModal('alertModal')"
+                class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active-press">Okay</button>
+        </div>
+    </div>
+
+    <div id="logoutModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[250] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 text-center modal-content">
+            <div
+                class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl border-4 border-rose-100">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-2">Ready to Leave?</h2>
+            <p class="text-sm font-medium text-slate-500 mb-8">Are you sure you want to log out?</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('logoutModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Cancel</button>
+                <button onclick="confirmLogout()"
+                    class="w-1/2 bg-rose-500 hover:bg-rose-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-rose-500/30 transition-all active-press">Log
+                    Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="voidModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[250] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 text-center modal-content">
+            <div
+                class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl border-4 border-rose-100">
+                <i class="fa-solid fa-trash"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Void Item</h2>
+            <p class="text-sm font-medium text-slate-500 mb-5">Voiding: <span id="voidItemName"
+                    class="font-bold text-slate-700"></span></p>
+
+            <div class="mb-4 text-left">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity to Void</label>
+                <input type="number" id="voidQty" min="1" value="1"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:border-primary">
+                <p class="text-[10px] font-medium text-slate-400 mt-1">Maximum available: <span
+                        id="voidMaxQtyUI">1</span></p>
+            </div>
+
+            <div class="mb-4 text-left">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Reason for Void</label>
+                <select id="voidReasonSelect" onchange="handleVoidReasonChange()"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:border-primary">
+                    <option value="" disabled selected>Select Reason</option>
+                    <option value="Customer Changed Mind">Customer Changed Mind</option>
+                    <option value="Wrong Entry">Wrong Entry</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                    <option value="Spoiled/Spilled">Spoiled / Spilled</option>
+                    <option value="others">Others (Specify)</option>
+                </select>
+                <input type="text" id="voidOtherReason" placeholder="Specify Reason"
+                    class="hidden mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:border-primary">
+            </div>
+
+            <div class="mb-6 relative text-left">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Manager Password</label>
+                <i class="fa-solid fa-lock absolute left-4 top-[38px] text-slate-400"></i>
+                <input type="password" id="voidManagerPassword" placeholder="Manager Password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm font-semibold outline-none focus:border-primary">
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('voidModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Cancel</button>
+                <button onclick="confirmVoid()"
+                    class="w-1/2 bg-rose-500 hover:bg-rose-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-rose-500/30 transition-all active-press">Void</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="paymentModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[250] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-6 md:p-8 modal-content">
+            <button onclick="closeModal('paymentModal')"
+                class="absolute top-5 right-5 text-slate-400 hover:bg-slate-100 p-2.5 rounded-full"><i
+                    class="fa-solid fa-xmark"></i></button>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Select Payment</h2>
+            <p class="text-sm font-medium text-slate-500 mb-6">Choose payment method for this transaction.</p>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="openCheckout('cash')"
+                    class="bg-slate-50 border border-slate-200 hover:border-primary hover:bg-primary/5 p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all active-press text-slate-700 hover:text-primary">
+                    <i class="fa-solid fa-money-bill-wave text-2xl"></i><span class="text-sm font-bold">Cash</span>
+                </button>
+                <button onclick="openCheckout('qrph')"
+                    class="bg-slate-50 border border-slate-200 hover:border-primary hover:bg-primary/5 p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all active-press text-slate-700 hover:text-primary">
+                    <i class="fa-solid fa-qrcode text-2xl"></i><span class="text-sm font-bold">QRPh</span>
+                </button>
+                <button onclick="openCheckout('card')"
+                    class="bg-slate-50 border border-slate-200 hover:border-primary hover:bg-primary/5 p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all active-press text-slate-700 hover:text-primary">
+                    <i class="fa-regular fa-credit-card text-2xl"></i><span class="text-sm font-bold">Card</span>
+                </button>
+                <button onclick="openSplitBillModal()"
+                    class="bg-slate-50 border border-slate-200 hover:border-primary hover:bg-primary/5 p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all active-press text-slate-700 hover:text-primary">
+                    <i class="fa-solid fa-arrows-split-up-and-left text-2xl"></i><span class="text-sm font-bold">Split
+                        Bill</span>
+                </button>
+            </div>
+            <button onclick="triggerFreeOfCharge()"
+                class="w-full bg-rose-50 border border-rose-200 hover:border-rose-500 hover:bg-rose-100 p-4 rounded-xl flex items-center justify-center gap-3 transition-all active-press text-rose-600">
+                <i class="fa-solid fa-gift text-xl"></i><span class="text-sm font-bold">Free of Charge</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="checkoutModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[260] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 modal-content">
+            <h2 class="text-xl font-extrabold text-slate-800 mb-4" id="coTitle">Checkout</h2>
+
+            <div
+                class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-5 space-y-2 text-sm font-medium text-slate-600">
+                <div class="flex justify-between"><span>Subtotal:</span><span id="coUI_Subtotal">₱0.00</span></div>
+
+                <div class="flex justify-between items-center py-1">
+                    <span>Discount:</span>
+                    <div class="flex gap-2 items-center">
+                        <select id="coDiscountSelect" onchange="handleDiscountChange()"
+                            class="border border-slate-300 rounded-lg p-1.5 text-xs outline-none bg-white font-bold text-slate-700">
+                            <option value="0">None</option>
+                            <option value="20">20% PWD/Senior</option>
+                            <option value="custom">Custom %</option>
+                        </select>
+                        <input type="number" id="coCustomDiscount"
+                            class="hidden w-16 border border-slate-300 rounded-lg p-1.5 text-xs outline-none font-bold"
+                            placeholder="%" oninput="calculateCheckout()">
+                    </div>
+                </div>
+
+                <div class="flex justify-between text-rose-500 font-bold"><span>Discount Amt:</span><span
+                        id="coUI_DiscountAmt">-₱0.00</span></div>
+                <div class="flex justify-between"><span>Service Charge (10%):</span><span id="coUI_SC">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400"><span>VAT (12% Inc):</span><span
+                        id="coUI_VAT">₱0.00</span></div>
+
+                <div class="flex justify-between font-black text-xl text-slate-800 pt-3 mt-1 border-t border-slate-200">
+                    <span>Grand Total:</span><span id="coUI_GrandTotal">₱0.00</span>
+                </div>
+
+                <div class="flex justify-between items-center py-2 border-t border-slate-200 mt-2">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold text-slate-600">Have a Voucher?</span>
+                        <span id="coUI_VoucherStatus" class="text-[9px] font-bold text-slate-400">Not applied</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="coVoucherCode" placeholder="CODE"
+                            class="w-24 border border-slate-300 rounded-lg p-1.5 text-xs outline-none uppercase font-bold text-slate-700">
+                        <button onclick="applyVoucher()"
+                            class="bg-primary hover:bg-primaryDark text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active-press">Apply</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="coInputArea" class="mb-6 space-y-4"></div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('checkoutModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Back</button>
+                <button onclick="submitCheckout()"
+                    class="w-1/2 bg-primary hover:bg-primaryDark text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press">Confirm
+                    Pay</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="managerAuthModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[270] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 modal-content">
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Manager Access</h2>
+            <p class="text-sm font-medium text-slate-500 mb-6">Authorization required to approve discount/voids.</p>
+            <div class="mb-6 relative">
+                <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="password" id="managerPassword" placeholder="Manager Password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeModal('managerAuthModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Cancel</button>
+                <button onclick="confirmManagerAuth()"
+                    class="w-1/2 bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active-press">Authorize</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmSummaryModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[280] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 modal-content">
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl border-4 border-blue-100">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1 text-center">Confirm Payment</h2>
+            <p class="text-sm font-medium text-slate-500 mb-5 text-center">Please review the details below.</p>
+
+            <div
+                class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 space-y-2 text-sm font-medium text-slate-700">
+                <div class="flex justify-between"><span class="text-slate-500">Method:</span><span id="csMethod"
+                        class="font-bold uppercase text-primary">--</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Grand Total:</span><span id="csTotal"
+                        class="font-bold text-emerald-600">--</span></div>
+
+                <div id="csCashDetails" class="hidden flex-col space-y-2 border-t border-slate-200 pt-2 mt-2">
+                    <div class="flex justify-between"><span class="text-slate-500">Amount Given:</span><span
+                            id="csGiven" class="font-bold">--</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Change:</span><span id="csChange"
+                            class="font-bold text-rose-500">--</span></div>
+                </div>
+
+                <div id="csRefDetails" class="hidden flex-col space-y-2 border-t border-slate-200 pt-2 mt-2">
+                    <div class="flex justify-between"><span class="text-slate-500">Ref No:</span><span id="csRefNum"
+                            class="font-bold">--</span></div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('confirmSummaryModal'); openModal('checkoutModal');"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Edit</button>
+                <button onclick="finalizePayment()"
+                    class="w-1/2 bg-primary hover:bg-primaryDark text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all active-press">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mapSelectionModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[280] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-5xl h-[85vh] rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-6 flex flex-col modal-content">
+            <button onclick="closeModal('mapSelectionModal')"
+                class="absolute top-5 right-5 text-slate-400 hover:bg-slate-100 p-2.5 rounded-full z-10"><i
+                    class="fa-solid fa-xmark"></i></button>
+
+            <div class="mb-4 shrink-0">
+                <h2 id="mapModalTitle" class="text-xl font-extrabold text-slate-800">Transfer Table</h2>
+                <p id="mapModalDesc" class="text-sm text-slate-500 font-medium mt-1">Select a <span
+                        class="text-[#D9C8A9] font-bold">VACANT</span> table.</p>
+            </div>
+
+            <div class="relative flex-grow border border-slate-200 rounded-2xl overflow-hidden bg-[#fafafa]">
+                <div class="absolute inset-0">
+                    <svg id="svgCanvasModal" width="100%" height="100%" viewBox="0 0 1000 800"
+                        preserveAspectRatio="xMidYMid meet">
+                        <image id="floorplan-bg-modal" x="0" y="0" width="100%" height="100%"
+                            preserveAspectRatio="xMidYMid slice" href=""></image>
+                        <g id="dynamic-elements-modal"></g>
+                        <g id="dynamic-tables-modal"></g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmMapActionModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[290] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden relative border border-slate-200 transform scale-95 transition-transform p-8 text-center modal-content">
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border-4 border-blue-100">
+                <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <h2 id="confirmMapActionTitle" class="text-xl font-extrabold text-slate-800 mb-1">Confirm Action</h2>
+            <p id="confirmMapActionDesc" class="text-sm font-medium text-slate-500 mb-6">Are you sure?</p>
+
+            <div class="mb-6 relative text-left">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Manager Password</label>
+                <i class="fa-solid fa-lock absolute left-4 top-[38px] text-slate-400"></i>
+                <input type="password" id="mapActionManagerPassword" placeholder="Manager Password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm font-semibold outline-none focus:border-primary">
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal('confirmMapActionModal')"
+                    class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-all active-press">Cancel</button>
+                <button id="confirmMapActionBtn"
+                    class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all active-press">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTxId = null;
+        let itemToVoidId = null;
+        let itemToVoidMaxQty = 1;
+        let checkoutMethod = null;
+        let finalGrandTotal = 0;
+        let currentData = { subtotal: 0, sc: 0, grandTotal: 0, rawItems: [], allGuests: [] };
+        let appliedDiscountAmt = 0;
+        let mapSelectionMode = '';
+        let splitMode = 'amount';
+        let splits = [];
+        let tableToTxnMap = {};
+
+        let appliedVoucherCode = null;
+        let appliedVoucherDiscount = 0;
+        let sbVoucherCode = null;
+        let sbVoucherDiscountType = null;
+        let sbVoucherDiscountValue = 0;
+        let authTargetAction = '';
+
+        let mergeTargetTxnId = null;
+
+        let separateCheckSelection = {};
+
+        // ----- DYNAMIC FLOORPLAN LOGIC -----
+        let cashierTableData = {};
+        let layoutData = { tables: {}, elements: {} };
+        let globalSettings = { color_vacant: '#D9C8A9', color_occupied: '#E47E61' };
+
+        async function fetchCashierFloorplan() {
+            try {
+                const res = await fetch('/api/floorplan/data');
+                const data = await res.json();
+                if (data.success) {
+                    cashierTableData = {};
+                    for (let key in data.tables) {
+                        cashierTableData[data.tables[key].id] = data.tables[key];
+                    }
+                    layoutData.tables = data.tables;
+                    layoutData.elements = data.elements;
+                    if (data.settings) {
+                        globalSettings.color_vacant = data.settings.color_vacant || '#D9C8A9';
+                        globalSettings.color_occupied = data.settings.color_occupied || '#E47E61';
+                        if (data.settings.floorplan_bg_image) {
+                            document.getElementById('floorplan-bg-dash').setAttribute('href', data.settings.floorplan_bg_image);
+                            document.getElementById('floorplan-bg-modal').setAttribute('href', data.settings.floorplan_bg_image);
+                        }
+                    }
+                    renderCashierCanvas('dash');
+                    renderCashierCanvas('modal');
+                }
+            } catch (error) { console.error("Error fetching floorplan data:", error); }
+        }
+
+        function renderCashierCanvas(viewType) {
+            const containerTables = document.getElementById(`dynamic-tables-${viewType}`);
+            const containerElements = document.getElementById(`dynamic-elements-${viewType}`);
+            if (!containerTables || !containerElements) return;
+
+            containerTables.innerHTML = '';
+            containerElements.innerHTML = '';
+
+            for (let id in layoutData.elements) {
+                renderElement(layoutData.elements[id], containerElements);
+            }
+            for (let key in layoutData.tables) {
+                renderTable(layoutData.tables[key], containerTables, viewType);
+            }
+        }
+
+        function renderTable(t, container, viewType) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'table-group cursor-pointer hover:opacity-80 transition-opacity');
+            g.setAttribute('id', viewType === 'dash' ? `dash-table-${t.id}` : `t-table-${t.id}`);
+
+            if (viewType === 'dash') {
+                g.addEventListener('click', () => handleDashboardMapClick(t.id));
+            } else {
+                g.addEventListener('click', () => selectMapTable(t.id));
+            }
+
+            const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            ring.setAttribute('class', 'highlight-ring');
+            ring.setAttribute('cx', t.posX);
+            ring.setAttribute('cy', t.posY);
+            ring.setAttribute('r', Math.max(t.width, t.height) / 2 + 8);
+            ring.setAttribute('fill', 'transparent');
+            ring.setAttribute('stroke', 'transparent');
+            ring.setAttribute('stroke-width', '4');
+            ring.style.transition = 'stroke 0.2s';
+            g.appendChild(ring);
+
+            let shapeEl;
+            if (t.shape === 'rect') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shapeEl.setAttribute('x', t.posX - (t.width / 2));
+                shapeEl.setAttribute('y', t.posY - (t.height / 2));
+                shapeEl.setAttribute('width', t.width);
+                shapeEl.setAttribute('height', t.height);
+                shapeEl.setAttribute('rx', 8);
+            } else {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                shapeEl.setAttribute('cx', t.posX);
+                shapeEl.setAttribute('cy', t.posY);
+                shapeEl.setAttribute('r', t.width / 2);
+            }
+
+            let actualFill = 'transparent';
+            if (t.fillColor !== 'transparent') {
+                actualFill = t.status === 'occupied' ? globalSettings.color_occupied : globalSettings.color_vacant;
+            }
+            shapeEl.setAttribute('fill', actualFill);
+            shapeEl.setAttribute('stroke', t.strokeColor);
+            shapeEl.setAttribute('stroke-width', '4');
+
+            const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textEl.setAttribute('x', t.posX);
+            textEl.setAttribute('y', t.posY + 5);
+            textEl.setAttribute('font-size', '14');
+            textEl.setAttribute('font-weight', '900');
+            textEl.setAttribute('fill', t.textColor);
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('pointer-events', 'none');
+            textEl.textContent = t.name.replace('Table-', 'T');
+
+            g.appendChild(shapeEl);
+            g.appendChild(textEl);
+            container.appendChild(g);
+        }
+
+        function renderElement(e, container) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            let shapeEl;
+            if (e.elType === 'line') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                shapeEl.setAttribute('x1', e.posX);
+                shapeEl.setAttribute('y1', e.posY);
+                shapeEl.setAttribute('x2', e.posX2);
+                shapeEl.setAttribute('y2', e.posY2);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                shapeEl.setAttribute('stroke-linecap', 'round');
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'text') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                shapeEl.setAttribute('x', e.posX);
+                shapeEl.setAttribute('y', e.posY);
+                shapeEl.setAttribute('font-size', e.fontSize);
+                shapeEl.setAttribute('font-family', "'Inter', sans-serif");
+                shapeEl.setAttribute('font-weight', 'bold');
+                shapeEl.setAttribute('fill', e.textColor);
+                shapeEl.setAttribute('text-anchor', 'middle');
+                shapeEl.textContent = e.content;
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'shape') {
+                if (e.shapeType === 'rect') {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                    shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                    shapeEl.setAttribute('width', e.width);
+                    shapeEl.setAttribute('height', e.height);
+                    shapeEl.setAttribute('rx', 8);
+                } else {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    shapeEl.setAttribute('cx', e.posX);
+                    shapeEl.setAttribute('cy', e.posY);
+                    shapeEl.setAttribute('r', e.width / 2);
+                }
+                shapeEl.setAttribute('fill', e.fillColor);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'image') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                shapeEl.setAttribute('href', e.content);
+                shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                shapeEl.setAttribute('width', e.width);
+                shapeEl.setAttribute('height', e.height);
+                shapeEl.setAttribute('preserveAspectRatio', 'none');
+                g.appendChild(shapeEl);
+            }
+
+            container.appendChild(g);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTableToTxnMap();
+            fetchCashierFloorplan();
+        });
+
+        function initTableToTxnMap() {
+            tableToTxnMap = {};
+            {% if transactions %}
+            {% for txn in transactions %}
+            {% if txn.assigned_tables %}
+            "{{ txn.assigned_tables }}".split(', ').forEach(tableName => {
+                const idMatch = tableName.match(/\d+/);
+                if (idMatch) {
+                    tableToTxnMap[idMatch[0]] = "{{ txn.id }}";
+                }
+            });
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        }
+
+        function switchView(view) {
+            const tableView = document.getElementById('view-table');
+            const mapView = document.getElementById('view-map');
+            const btnTable = document.getElementById('btn-view-table');
+            const btnMap = document.getElementById('btn-view-map');
+            const search = document.getElementById('searchContainer');
+
+            if (view === 'table') {
+                tableView.classList.remove('hidden');
+                mapView.classList.add('hidden');
+                search.classList.remove('invisible', 'opacity-0');
+
+                btnTable.className = "px-5 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-primary";
+                btnMap.className = "px-5 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700";
+            } else {
+                tableView.classList.add('hidden');
+                mapView.classList.remove('hidden');
+                search.classList.add('invisible', 'opacity-0');
+
+                btnMap.className = "px-5 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-primary";
+                btnTable.className = "px-5 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700";
+
+                fetchCashierFloorplan();
+            }
+        }
+
+        function handleDashboardMapClick(tableId) {
+            const txnId = tableToTxnMap[tableId];
+            if (txnId) {
+                loadTransactionDetails(txnId);
+            } else {
+                showAlert('Vacant Table', `Table ${tableId} is currently vacant and has no active transaction.`, 'info');
+            }
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                const content = modal.querySelector('.modal-content, .alert-content');
+                if (content) content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('opacity-0');
+            const content = modal.querySelector('.modal-content, .alert-content');
+            if (content) content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden'); modal.classList.remove('flex');
+                if (modalId === 'voidModal') {
+                    document.getElementById('voidManagerPassword').value = '';
+                    document.getElementById('voidOtherReason').value = '';
+                    document.getElementById('voidReasonSelect').selectedIndex = 0;
+                    handleVoidReasonChange();
+                }
+                if (modalId === 'managerAuthModal') document.getElementById('managerPassword').value = '';
+                if (modalId === 'confirmMapActionModal') document.getElementById('mapActionManagerPassword').value = '';
+            }, 300);
+        }
+
+        function toggleLoader(show) { show ? openModal('loadingModal') : closeModal('loadingModal'); }
+
+        function showAlert(title, message, type = 'info') {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            const icon = document.getElementById('alertIcon');
+            if (type === 'success') {
+                icon.className = "w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl border-4 border-emerald-100";
+                icon.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else if (type === 'error') {
+                icon.className = "w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl border-4 border-rose-100";
+                icon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            } else {
+                icon.className = "w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl border-4 border-blue-100";
+                icon.innerHTML = '<i class="fa-solid fa-info"></i>';
+            }
+            openModal('alertModal');
+        }
+
+        function confirmLogout() { window.location.href = "{{ url_for('logout') }}"; }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('live-date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            document.getElementById('live-time').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        setInterval(updateTime, 1000); updateTime();
+
+        function toggleActionsMenu() {
+            const menu = document.getElementById('actionsDropdown');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function (event) {
+            const menu = document.getElementById('actionsDropdown');
+            if (!menu) return;
+            const button = menu.previousElementSibling;
+            if (!menu.classList.contains('hidden') && !menu.contains(event.target) && button && !button.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        async function loadTransactionDetails(txId) {
+            currentTxId = txId;
+            toggleLoader(true);
+            try {
+                const response = await fetch(`/api/transaction/${txId}`);
+                const data = await response.json();
+                if (data.success) {
+                    currentData.subtotal = data.subtotal;
+                    currentData.sc = data.service_charge;
+                    currentData.grandTotal = data.grand_total;
+                    currentData.rawItems = data.items;
+                    currentData.allGuests = data.all_guests || ['Guest'];
+
+                    document.getElementById('sidebar-empty-view').classList.add('hidden');
+                    document.getElementById('sidebar-active-view').classList.remove('hidden');
+                    document.getElementById('sidebar-active-view').classList.add('flex');
+                    document.getElementById('pos-customer-name').innerText = data.transaction.guest_name;
+                    document.getElementById('pos-txn-code').innerText = data.transaction.transaction_code;
+
+                    const tableBadge = document.getElementById('pos-table-no');
+                    if (tableBadge) {
+                        tableBadge.innerText = data.transaction.assigned_tables || 'No Table';
+                    }
+
+                    const container = document.getElementById('pos-items-container');
+                    container.innerHTML = '';
+                    data.items.forEach(item => {
+                        const isVoid = item.is_void === true || item.is_void === 1 || (item.status && String(item.status).toLowerCase().includes('void'));
+                        const waiterName = item.waiter_name || 'Unknown Waiter';
+
+                        if (!isVoid) {
+                            let statusBadgeColor = 'bg-slate-100 text-slate-600';
+                            let displayStatus = item.status || 'pending';
+                            if (displayStatus === 'pending') statusBadgeColor = 'bg-orange-100 text-orange-600';
+                            else if (displayStatus === 'preparing') statusBadgeColor = 'bg-indigo-100 text-indigo-600';
+                            else if (displayStatus === 'served') statusBadgeColor = 'bg-emerald-100 text-emerald-600';
+
+                            container.innerHTML += `
+                                <div class="bg-white border border-slate-200 rounded-xl p-2 flex justify-between items-center shadow-sm relative group cursor-help transition-all hover:border-slate-300">
+                                    <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
+                                        Waiter: ${waiterName}
+                                        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-1 overflow-hidden">
+                                        <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 font-extrabold text-xs">
+                                            ${item.quantity}x
+                                        </div>
+                                        <div class="truncate pr-2">
+                                            <div class="flex items-center gap-2 mb-0.5">
+                                                <p class="text-xs font-extrabold text-slate-800 leading-tight truncate uppercase">${item.menu_name}</p>
+                                                <span class="${statusBadgeColor} px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide">${displayStatus}</span>
+                                            </div>
+                                            <p class="text-[10px] font-medium text-slate-400 mt-0.5">₱ ${parseFloat(item.unit_price).toFixed(2)} each</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3 shrink-0 pl-2 z-10">
+                                        <span class="text-sm font-extrabold text-slate-800">₱ ${parseFloat(item.total_price).toFixed(2)}</span>
+                                        <button onclick="triggerVoid(${item.id}, '${item.menu_name.replace(/'/g, "\\'")}', ${item.quantity})" title="Void Item" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all shadow-sm active-press">
+                                            <i class="fa-solid fa-trash-can text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            container.innerHTML += `
+                                <div class="bg-white border border-primary/40 rounded-xl p-2 flex justify-between items-center shadow-sm relative group cursor-help">
+                                    <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
+                                        Ordered by: ${waiterName}
+                                        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-1 overflow-hidden">
+                                        <div class="w-9 h-9 rounded-lg bg-slate-50 text-primary/60 flex items-center justify-center shrink-0 text-sm">
+                                            <i class="fa-solid fa-ban"></i>
+                                        </div>
+                                        <div class="truncate pr-2 flex flex-col justify-center">
+                                            <div class="flex items-center gap-1.5 mb-0.5">
+                                                <p class="text-xs font-extrabold text-slate-500 leading-tight truncate uppercase">${item.menu_name}</p>
+                                                <span class="bg-rose-50 border border-rose-100 text-rose-400 px-1 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide">VOID</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <p class="text-[10px] font-medium text-slate-400">₱ ${parseFloat(item.unit_price).toFixed(2)} ea</p>
+                                                <p class="text-[10px] font-bold text-rose-400 flex items-center gap-1 truncate border-l border-slate-200 pl-2">
+                                                    <i class="fa-solid fa-circle-info text-[9px]"></i> ${item.void_reason || 'N/A'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center shrink-0 pl-2 pr-1">
+                                        <span class="text-sm font-extrabold text-slate-400 line-through decoration-2">₱ ${parseFloat(item.total_price).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    document.getElementById('pos-subtotal').innerText = `₱ ${data.subtotal.toFixed(2)}`;
+                    document.getElementById('pos-sc').innerText = `₱ ${data.service_charge.toFixed(2)}`;
+                    document.getElementById('pos-grandtotal').innerText = `₱ ${data.grand_total.toFixed(2)}`;
+                } else {
+                    showAlert('Error', 'Failed to load transaction details.', 'error');
+                }
+            } catch (err) { showAlert('Error', 'Cannot connect to server.', 'error'); }
+            toggleLoader(false);
+        }
+
+        async function handlePreBill() {
+            if (!currentTxId) {
+                return showAlert('Action Denied', 'Please select a transaction first to print a pre-bill.', 'error');
+            }
+
+            toggleLoader(true);
+
+            try {
+                const response = await fetch(`/print_prebill/${currentTxId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Success', 'Pre-bill has been successfully sent to the cashier printer.', 'success');
+                } else {
+                    showAlert('Error', data.message || 'Failed to print pre-bill.', 'error');
+                }
+            } catch (error) {
+                console.error("Error printing pre-bill:", error);
+                showAlert('Error', 'Network error while attempting to print pre-bill.', 'error');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        function handlePaymentClick() {
+            if (!currentTxId) {
+                return showAlert('Action Denied', 'Please select a transaction first.', 'error');
+            }
+
+            const hasUnservedItems = currentData.rawItems.some(item => {
+                const isVoid = item.is_void === true || item.is_void === 1 || (item.status && String(item.status).toLowerCase().includes('void'));
+                if (isVoid) return false;
+                const displayStatus = (item.status || 'pending').toLowerCase();
+                return displayStatus === 'pending' || displayStatus === 'preparing';
+            });
+
+            if (hasUnservedItems) {
+                return showAlert('Payment Blocked', 'Cannot proceed to payment. All ordered items must be marked as "Served" or be "Voided" before you can process the bill.', 'error');
+            }
+
+            openModal('paymentModal');
+        }
+
+        function openSplitBillModal() {
+            if (!currentTxId) return showAlert('Action Denied', 'Please select a transaction.', 'error');
+            closeModal('paymentModal');
+
+            document.getElementById('sbGuestName').innerText = document.getElementById('pos-customer-name').innerText;
+
+            currentData.rawItems.forEach(i => {
+                i.assignedSplitId = null;
+                i.assignedQty = {};
+            });
+
+            document.getElementById('cbDivideEqually').checked = false;
+            document.getElementById('divideEquallyGuests').classList.add('hidden');
+
+            sbVoucherCode = null;
+            document.getElementById('sbVoucherCode').value = '';
+            document.getElementById('sbUI_VoucherStatus').innerText = 'Not applied';
+            document.getElementById('sbUI_VoucherStatus').className = 'text-[9px] font-bold text-slate-400 mt-1';
+
+            splits = [{
+                id: Date.now(),
+                name: currentData.allGuests[0] || 'Split 1',
+                amount: currentData.grandTotal,
+                method: 'cash',
+                discountType: '0',
+                customDiscount: 0,
+                given: 0,
+                ref: '',
+                items: []
+            }];
+
+            setSplitMode('amount');
+            openModal('splitBillModal');
+        }
+
+        function setSplitMode(mode) {
+            splitMode = mode;
+
+            if (mode === 'amount') {
+                document.getElementById('tabAmount').className = "flex-1 py-2.5 font-bold rounded-lg bg-white shadow-sm text-primary transition-all";
+                document.getElementById('tabItems').className = "flex-1 py-2.5 font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+                document.getElementById('splitToolbarAmount').classList.remove('hidden');
+
+                splits = [{ id: Date.now(), name: currentData.allGuests[0] || 'Split 1', amount: currentData.grandTotal, method: 'cash', discountType: '0', customDiscount: 0, given: 0, ref: '', items: [] }];
+                document.getElementById('cbDivideEqually').checked = false;
+                document.getElementById('divideEquallyGuests').classList.add('hidden');
+            } else {
+                document.getElementById('tabItems').className = "flex-1 py-2.5 font-bold rounded-lg bg-white shadow-sm text-primary transition-all";
+                document.getElementById('tabAmount').className = "flex-1 py-2.5 font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+                document.getElementById('splitToolbarAmount').classList.add('hidden');
+
+                currentData.rawItems.forEach(i => {
+                    i.assignedSplitId = null;
+                    i.assignedQty = {};
+                });
+                splits = [{ id: Date.now(), name: currentData.allGuests[0] || 'Split 1', amount: 0, method: 'cash', discountType: '0', customDiscount: 0, given: 0, ref: '', items: [] }];
+            }
+            renderSplits();
+        }
+
+        function toggleDivideEqually(isChecked) {
+            const container = document.getElementById('divideEquallyGuests');
+            if (isChecked) {
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                container.innerHTML = currentData.allGuests.map((g, i) => `
+                    <label class="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:border-primary">
+                        <input type="checkbox" checked value="${g}" onchange="recalculateEqualSplits()" class="eq-guest-cb accent-primary w-4 h-4 cursor-pointer">
+                        <span class="text-xs font-bold text-slate-700">${g}</span>
+                    </label>
+                `).join('');
+                recalculateEqualSplits();
+            } else {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+        }
+
+        function recalculateEqualSplits() {
+            const checkboxes = document.querySelectorAll('.eq-guest-cb:checked');
+            const checkedGuests = Array.from(checkboxes).map(cb => cb.value);
+
+            if (checkedGuests.length === 0) {
+                splits = [];
+                renderSplits();
+                return;
+            }
+
+            const amountPerWay = currentData.grandTotal / checkedGuests.length;
+
+            splits = checkedGuests.map((g, index) => ({
+                id: Date.now() + index,
+                name: g,
+                amount: amountPerWay,
+                method: 'cash',
+                discountType: '0',
+                customDiscount: 0,
+                given: 0,
+                ref: '',
+                items: []
+            }));
+
+            renderSplits();
+        }
+
+        function addSplit() {
+            splits.push({
+                id: Date.now(),
+                name: `Split ${splits.length + 1}`,
+                amount: 0,
+                method: 'cash',
+                discountType: '0',
+                customDiscount: 0,
+                given: 0,
+                ref: '',
+                items: []
+            });
+            renderSplits();
+        }
+
+        function removeSplit(id) {
+            splits = splits.filter(s => s.id !== id);
+            currentData.rawItems.forEach(i => {
+                if (i.assignedSplitId === id) i.assignedSplitId = null;
+                if (i.assignedQty && i.assignedQty[id]) delete i.assignedQty[id];
+            });
+            renderSplits();
+        }
+
+        function updateSplit(id, field, value) {
+            const s = splits.find(x => x.id === id);
+            if (s) {
+                s[field] = value;
+                renderSplits();
+            }
+        }
+
+        function toggleItemAssignment(splitId, itemId, isChecked) {
+            let item = currentData.rawItems.find(i => i.id === itemId);
+            if (isChecked) {
+                item.assignedSplitId = splitId;
+            } else {
+                item.assignedSplitId = null;
+            }
+
+            let s = splits.find(sp => sp.id === splitId);
+            let assignedItems = currentData.rawItems.filter(i => i.assignedSplitId === splitId);
+            let itemsTotal = assignedItems.reduce((sum, i) => sum + i.total_price, 0);
+
+            const scRate = currentData.subtotal > 0 ? (currentData.sc / currentData.subtotal) : 0;
+
+            s.amount = itemsTotal * (1 + scRate);
+            s.items = assignedItems.map(i => i.id);
+
+            renderSplits();
+        }
+
+        async function applyVoucher() {
+            const code = document.getElementById('coVoucherCode').value.trim().toUpperCase();
+
+            if (!code) {
+                showAlert('Error', 'Please enter a voucher code.', 'error');
+                return;
+            }
+
+            toggleLoader(true);
+            try {
+                const res = await fetch('/api/validate_voucher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    appliedVoucherCode = code;
+
+                    if (data.discount_type === 'percentage') {
+                        appliedVoucherDiscount = currentData.subtotal * (parseFloat(data.discount_value) / 100);
+                    } else {
+                        appliedVoucherDiscount = parseFloat(data.discount_value);
+                    }
+
+                    let discountText = data.discount_type === 'percentage' ? `${data.discount_value}% OFF` : `₱${data.discount_value} OFF`;
+
+                    document.getElementById('coUI_VoucherStatus').innerText = `Applied! (${discountText})`;
+                    document.getElementById('coUI_VoucherStatus').className = "text-[9px] font-bold text-emerald-500 mt-1";
+
+                    showAlert('Success', `Voucher applied: ${discountText}`, 'success');
+
+                    calculateCheckout();
+                } else {
+                    appliedVoucherCode = null;
+                    appliedVoucherDiscount = 0;
+
+                    document.getElementById('coUI_VoucherStatus').innerText = data.message;
+                    document.getElementById('coUI_VoucherStatus').className = "text-[9px] font-bold text-rose-500 mt-1";
+
+                    showAlert('Error', data.message || 'Invalid voucher code.', 'error');
+                    calculateCheckout();
+                }
+            } catch (err) {
+                showAlert('Error', 'Failed to validate voucher. Check your connection.', 'error');
+            }
+            toggleLoader(false);
+        }
+
+        async function applySplitVoucher() {
+            const code = document.getElementById('sbVoucherCode').value.trim().toUpperCase();
+            if (!code) return;
+
+            toggleLoader(true);
+            try {
+                const res = await fetch('/api/validate_voucher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    sbVoucherCode = code;
+                    sbVoucherDiscountType = data.discount_type;
+                    sbVoucherDiscountValue = parseFloat(data.discount_value);
+
+                    let discountText = data.discount_type === 'percentage' ? `${data.discount_value}% OFF` : `₱${data.discount_value} OFF`;
+                    document.getElementById('sbUI_VoucherStatus').innerText = `Voucher Applied! (${discountText})`;
+                    document.getElementById('sbUI_VoucherStatus').className = "text-[9px] font-bold text-emerald-500 mt-1";
+
+                    showAlert('Success', `Voucher applied! The ${discountText} discount has been automatically distributed across all splits.`, 'success');
+                    renderSplits();
+                } else {
+                    sbVoucherCode = null;
+                    sbVoucherDiscountType = null;
+                    sbVoucherDiscountValue = 0;
+                    document.getElementById('sbUI_VoucherStatus').innerText = data.message;
+                    document.getElementById('sbUI_VoucherStatus').className = "text-[9px] font-bold text-rose-500 mt-1";
+                    renderSplits();
+                }
+            } catch (err) {
+                showAlert('Error', 'Failed to validate voucher.', 'error');
+            }
+            toggleLoader(false);
+        }
+
+        function renderSplits() {
+            const container = document.getElementById('splitsContainer');
+            container.innerHTML = '';
+
+            let totalGrossAllocated = 0;
+            let totalDiscounts = 0;
+            let totalNetPayable = 0;
+
+            const extendedGuestList = Array.from(new Set([...currentData.allGuests]));
+
+            const scRate = currentData.subtotal > 0 ? (currentData.sc / currentData.subtotal) : 0;
+
+            splits.forEach((s, index) => {
+                let itemsUI = '';
+
+                if (splitMode === 'items') {
+                    let itemsTotal = 0;
+                    let assignedItemPayloads = [];
+
+                    currentData.rawItems.forEach(i => {
+                        if (i.assignedQty && i.assignedQty[s.id]) {
+                            itemsTotal += (i.assignedQty[s.id] * i.unit_price);
+                            assignedItemPayloads.push({ item_id: i.id, quantity: i.assignedQty[s.id] });
+                        }
+                    });
+
+                    s.amount = itemsTotal * (1 + scRate);
+                    s.items = assignedItemPayloads;
+
+                    let itemsListHtml = currentData.rawItems.filter(i => !i.is_void).map(i => {
+                        if (!i.assignedQty) i.assignedQty = {};
+
+                        let assignedToOthers = 0;
+                        for (let spId in i.assignedQty) {
+                            if (parseInt(spId) !== s.id) assignedToOthers += i.assignedQty[spId];
+                        }
+
+                        let availableToAssign = i.quantity - assignedToOthers;
+                        let currentAssigned = i.assignedQty[s.id] || 0;
+                        let totalUnassigned = i.quantity - assignedToOthers - currentAssigned;
+
+                        if (availableToAssign === 0 && currentAssigned === 0) return '';
+
+                        return `
+                <div class="flex items-center justify-between p-2 hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                    <div class="flex flex-col overflow-hidden pr-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded">${i.quantity}x</span>
+                            <span class="text-xs font-bold text-slate-700 truncate">${i.menu_name}</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-medium mt-0.5">
+                            ₱${i.unit_price.toFixed(2)} ea &bull; <span class="${totalUnassigned > 0 ? 'text-emerald-500' : 'text-slate-400'} font-bold">${totalUnassigned} unassigned</span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="updateItemAssignment(${s.id}, ${i.id}, ${currentAssigned - 1})" class="w-6 h-6 rounded-md bg-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentAssigned <= 0 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        </button>
+                        <span class="text-xs font-black w-4 text-center text-primary">${currentAssigned}</span>
+                        <button onclick="updateItemAssignment(${s.id}, ${i.id}, ${currentAssigned + 1})" class="w-6 h-6 rounded-md bg-primary text-white flex items-center justify-center hover:bg-primaryDark transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentAssigned >= availableToAssign ? 'disabled' : ''}>
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+
+                    itemsUI = `
+            <div class="mb-3 border border-slate-200 rounded-lg overflow-hidden">
+                <div class="bg-slate-100 p-2 text-[10px] uppercase font-bold text-slate-600 flex justify-between">
+                    <span>Assign Quantities</span>
+                </div>
+                <div class="p-2 h-36 overflow-y-auto bg-white custom-scrollbar">
+                    ${itemsListHtml === '' ? '<p class="text-xs text-slate-400 text-center py-4">No items left to assign.</p>' : itemsListHtml}
+                </div>
+                <div class="bg-emerald-50 p-2 text-xs font-bold text-emerald-700 flex justify-between border-t border-emerald-100 shadow-inner">
+                    <span>Gross Items Total (w/ SC):</span>
+                    <span>₱${s.amount.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+                }
+
+                totalGrossAllocated += s.amount;
+
+                let subtotalForCalc = s.amount / (1 + scRate);
+
+                let manualDiscountPct = s.discountType === 'custom' ? parseFloat(s.customDiscount || 0) : parseFloat(s.discountType);
+                let manualDiscountAmt = subtotalForCalc * (manualDiscountPct / 100);
+
+                let globalVoucherDiscountAmt = 0;
+                if (sbVoucherCode && currentData.subtotal > 0) {
+                    globalVoucherDiscountAmt = (sbVoucherDiscountType === 'percentage')
+                        ? currentData.subtotal * (sbVoucherDiscountValue / 100)
+                        : sbVoucherDiscountValue;
+                }
+
+                let proportionalVoucherDiscount = 0;
+                if (globalVoucherDiscountAmt > 0 && currentData.subtotal > 0) {
+                    proportionalVoucherDiscount = globalVoucherDiscountAmt * (subtotalForCalc / currentData.subtotal);
+                }
+
+                let discountAmt = manualDiscountAmt + proportionalVoucherDiscount;
+                let netAmount = s.amount - discountAmt;
+
+                totalDiscounts += discountAmt;
+                totalNetPayable += netAmount;
+
+                const uniqueGuests = [...new Set(extendedGuestList)];
+                let dropdownOptions = uniqueGuests.map(g => `<option value="${g}" ${s.name === g ? 'selected' : ''}>${g}</option>`).join('');
+                if (!uniqueGuests.includes(s.name)) dropdownOptions += `<option value="${s.name}" selected>${s.name}</option>`;
+
+                const cardHTML = `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative transition-all">
+            ${splits.length > 1 ? `<button onclick="removeSplit(${s.id})" class="absolute top-4 right-4 text-slate-300 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>` : ''}
+            
+            <div class="flex items-center gap-3 mb-4 pr-10">
+                <div class="w-8 h-8 bg-blue-50 text-blue-600 border border-blue-100 rounded-full flex items-center justify-center font-black text-sm shrink-0">${index + 1}</div>
+                <div class="w-full md:w-1/2 relative">
+                    <select onchange="updateSplit(${s.id}, 'name', this.value)" class="flex-1 w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-extrabold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer appearance-none pr-8">
+                        ${dropdownOptions}
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+                </div>
+            </div>
+            
+            ${splitMode === 'amount' ? `
+                <div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Share Amount (Gross)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₱</span>
+                        <input type="number" value="${s.amount.toFixed(2)}" onchange="updateSplit(${s.id}, 'amount', parseFloat(this.value)||0)" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-base font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    </div>
+                </div>
+            ` : itemsUI}
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Payment Method</label>
+                    <select onchange="updateSplit(${s.id}, 'method', this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-primary">
+                        <option value="cash" ${s.method === 'cash' ? 'selected' : ''}>Cash</option>
+                        <option value="qrph" ${s.method === 'qrph' ? 'selected' : ''}>QRPh</option>
+                        <option value="card" ${s.method === 'card' ? 'selected' : ''}>Card</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Discount</label>
+                    <select onchange="updateSplit(${s.id}, 'discountType', this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-primary">
+                        <option value="0" ${s.discountType === '0' ? 'selected' : ''}>None</option>
+                        <option value="20" ${s.discountType === '20' ? 'selected' : ''}>20% PWD/Senior</option>
+                        <option value="custom" ${s.discountType === 'custom' ? 'selected' : ''}>Custom %</option>
+                    </select>
+                    ${s.discountType === 'custom' ? `<input type="number" onchange="updateSplit(${s.id}, 'customDiscount', parseFloat(this.value)||0)" value="${s.customDiscount}" class="w-full mt-2 p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" placeholder="Enter %">` : ''}
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-slate-800 text-white p-3 rounded-xl mb-4 shadow-inner">
+                <span class="text-xs uppercase font-bold tracking-wider text-slate-300">Net Payable</span>
+                <span class="text-lg font-black">₱${netAmount.toFixed(2)}</span>
+            </div>
+
+            ${s.method === 'cash' ? `
+                <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                    <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Amount Given</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+                        <input type="number" value="${s.given || ''}" onchange="updateSplit(${s.id}, 'given', parseFloat(this.value)||0)" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold placeholder-slate-300 outline-none focus:border-primary" placeholder="0.00">
+                    </div>
+                    ${s.given >= netAmount ? `<p class="text-[10px] font-black text-emerald-600 mt-1.5 text-right">Change: ₱${(s.given - netAmount).toFixed(2)}</p>` : `<p class="text-[10px] font-bold text-rose-500 mt-1.5 text-right">Insufficient Amount</p>`}
+                </div>
+            ` : `
+                <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                    <label class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Reference Number</label>
+                    <input type="text" value="${s.ref}" onchange="updateSplit(${s.id}, 'ref', this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-primary" placeholder="Enter Ref Num">
+                </div>
+            `}
+        </div>
+    `;
+                container.innerHTML += cardHTML;
+            });
+
+            document.getElementById('ssSubtotal').innerText = `₱${currentData.subtotal.toFixed(2)}`;
+            document.getElementById('ssSC').innerText = `₱${currentData.sc.toFixed(2)}`;
+            document.getElementById('ssDiscounts').innerText = `-₱${totalDiscounts.toFixed(2)}`;
+            document.getElementById('ssNetPayable').innerText = `₱${totalNetPayable.toFixed(2)}`;
+
+            document.getElementById('ssAllocatedGross').innerText = `₱${totalGrossAllocated.toFixed(2)}`;
+
+            let remainingGross = currentData.grandTotal - totalGrossAllocated;
+            let remainingUI = document.getElementById('ssUnallocatedGross');
+            let btnSubmit = document.getElementById('btnSubmitSplits');
+            let warning = document.getElementById('ssWarning');
+
+            if (Math.abs(remainingGross) < 0.05) {
+                remainingUI.innerText = "₱0.00";
+                remainingUI.classList.replace('text-rose-500', 'text-slate-400');
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+                warning.classList.add('hidden');
+            } else {
+                remainingUI.innerText = `₱${remainingGross.toFixed(2)}`;
+                remainingUI.classList.replace('text-slate-400', 'text-rose-500');
+                btnSubmit.disabled = true;
+                btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+                warning.classList.remove('hidden');
+            }
+        }
+
+        function submitAllSplits() {
+            let remaining = currentData.grandTotal - splits.reduce((sum, s) => sum + s.amount, 0);
+            if (Math.abs(remaining) > 0.1) return showAlert('Error', 'Allocated Gross amounts do not match Gross Grand Total.', 'error');
+
+            let totalNet = 0;
+            let totalDiscountTracked = 0;
+            const tbody = document.getElementById('cssTableBody');
+            tbody.innerHTML = '';
+
+            const scRate = currentData.subtotal > 0 ? (currentData.sc / currentData.subtotal) : 0;
+
+            for (let s of splits) {
+                let subtotalForCalc = s.amount / (1 + scRate);
+
+                let manualDiscountPct = s.discountType === 'custom' ? parseFloat(s.customDiscount || 0) : parseFloat(s.discountType);
+                let manualDiscountAmt = subtotalForCalc * (manualDiscountPct / 100);
+
+                let globalVoucherDiscountAmt = 0;
+                if (sbVoucherCode && currentData.subtotal > 0) {
+                    globalVoucherDiscountAmt = (sbVoucherDiscountType === 'percentage') ? currentData.subtotal * (sbVoucherDiscountValue / 100) : sbVoucherDiscountValue;
+                }
+                let proportionalVoucherDiscount = 0;
+                if (globalVoucherDiscountAmt > 0 && currentData.subtotal > 0) {
+                    proportionalVoucherDiscount = globalVoucherDiscountAmt * (subtotalForCalc / currentData.subtotal);
+                }
+
+                let discountAmt = manualDiscountAmt + proportionalVoucherDiscount;
+                let netAmount = s.amount - discountAmt;
+
+                totalDiscountTracked += discountAmt;
+
+                if (s.method === 'cash' && s.given < netAmount) return showAlert('Error', `Insufficient amount given for ${s.name}.`, 'error');
+                if (s.method !== 'cash' && !s.ref.trim()) return showAlert('Error', `Reference number missing for ${s.name}.`, 'error');
+                if (splitMode === 'items' && s.items.length === 0) return showAlert('Error', `${s.name} has no assigned items.`, 'error');
+
+                totalNet += netAmount;
+
+                tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="p-3 font-bold text-slate-800">${s.name}</td>
+                <td class="p-3 font-semibold text-slate-500 uppercase text-xs text-center"><span class="bg-slate-100 px-2 py-1 rounded-md">${s.method}</span></td>
+                <td class="p-3 font-semibold text-rose-500 text-right">-₱${discountAmt.toFixed(2)}</td>
+                <td class="p-3 font-black text-emerald-600 text-right">₱${netAmount.toFixed(2)}</td>
+            </tr>
+        `;
+            }
+
+            document.getElementById('cssTotalNet').innerText = `₱${totalNet.toFixed(2)}`;
+
+            if (totalDiscountTracked > 0 || sbVoucherCode) {
+                authTargetAction = 'split';
+                document.getElementById('managerPassword').value = '';
+                openModal('managerAuthModal');
+            } else {
+                openModal('confirmSplitSummaryModal');
+            }
+        }
+
+        async function executeSubmitSplits() {
+            const scRate = currentData.subtotal > 0 ? (currentData.sc / currentData.subtotal) : 0;
+
+            const payload = {
+                transaction_id: currentTxId,
+                split_type: splitMode,
+                voucher_code: sbVoucherCode,
+                splits: splits.map(s => {
+                    let subtotalForCalc = s.amount / (1 + scRate);
+
+                    let manualDiscountPct = s.discountType === 'custom' ? parseFloat(s.customDiscount || 0) : parseFloat(s.discountType);
+                    let manualDiscountAmt = subtotalForCalc * (manualDiscountPct / 100);
+
+                    let globalVoucherDiscountAmt = 0;
+                    if (sbVoucherCode && currentData.subtotal > 0) {
+                        globalVoucherDiscountAmt = (sbVoucherDiscountType === 'percentage') ? currentData.subtotal * (sbVoucherDiscountValue / 100) : sbVoucherDiscountValue;
+                    }
+                    let proportionalVoucherDiscount = 0;
+                    if (globalVoucherDiscountAmt > 0 && currentData.subtotal > 0) {
+                        proportionalVoucherDiscount = globalVoucherDiscountAmt * (subtotalForCalc / currentData.subtotal);
+                    }
+
+                    let discountAmt = manualDiscountAmt + proportionalVoucherDiscount;
+                    return {
+                        split_name: s.name,
+                        amount: s.amount,
+                        method: s.method,
+                        discount: discountAmt,
+                        amount_given: s.given,
+                        reference_number: s.ref,
+                        items: s.items
+                    }
+                })
+            };
+
+            closeModal('confirmSplitSummaryModal');
+            closeModal('splitBillModal');
+            toggleLoader(true);
+
+            try {
+                const res = await fetch('/process_split_payments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert('Payment Successful', 'Split bills processed and closed successfully!', 'success');
+
+                    for (let i = 0; i < data.split_ids.length; i++) {
+                        const sId = data.split_ids[i];
+                        const spl = payload.splits[i];
+                        await fetch(`/print_split_receipt/${sId}?given=${spl.amount_given}&discount=${spl.discount}`);
+                    }
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    showAlert('Error', data.message, 'error');
+                }
+            } catch (e) {
+                showAlert('Error', 'Network error while processing splits.', 'error');
+            }
+            toggleLoader(false);
+        }
+
+        function updateItemAssignment(splitId, itemId, newQty) {
+            let item = currentData.rawItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            let assignedToOthers = 0;
+            for (let spId in item.assignedQty) {
+                if (parseInt(spId) !== splitId) assignedToOthers += item.assignedQty[spId];
+            }
+
+            let maxAllowed = item.quantity - assignedToOthers;
+            if (newQty < 0) newQty = 0;
+            if (newQty > maxAllowed) newQty = maxAllowed;
+
+            if (!item.assignedQty) item.assignedQty = {};
+            item.assignedQty[splitId] = newQty;
+
+            renderSplits();
+        }
+
+        function openCheckout(method) {
+            if (!currentTxId) return showAlert('Action Denied', 'Please select a transaction.', 'error');
+            closeModal('paymentModal');
+            checkoutMethod = method;
+
+            const titles = { 'cash': 'Cash Payment', 'qrph': 'QRPh Payment', 'card': 'Card Payment' };
+            document.getElementById('coTitle').innerText = titles[method] || 'Checkout';
+
+            document.getElementById('coDiscountSelect').value = "0";
+            document.getElementById('coCustomDiscount').value = "";
+            document.getElementById('coCustomDiscount').classList.add('hidden');
+
+            appliedVoucherCode = null;
+            appliedVoucherDiscount = 0;
+            document.getElementById('coVoucherCode').value = '';
+            document.getElementById('coUI_VoucherStatus').innerText = 'Not applied';
+            document.getElementById('coUI_VoucherStatus').classList.replace('text-emerald-500', 'text-slate-400');
+            document.getElementById('coUI_VoucherStatus').classList.replace('text-rose-500', 'text-slate-400');
+
+            const inputArea = document.getElementById('coInputArea');
+            if (method === 'cash') {
+                inputArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Amount Given</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+                            <input type="number" id="coAmountGiven" oninput="calculateCheckout()" class="w-full border border-slate-300 rounded-xl py-3 pl-8 pr-4 text-lg font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 mt-4">
+                        <span class="text-sm font-bold text-rose-600 uppercase">Change</span>
+                        <span class="text-xl font-black text-rose-600" id="coUI_Change">₱0.00</span>
+                    </div>
+                `;
+            } else {
+                inputArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Reference Number</label>
+                        <input type="text" id="coRefNum" class="w-full border border-slate-300 rounded-xl px-4 py-3 font-semibold outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Enter Ref Number">
+                    </div>
+                    <div class="flex justify-between items-center bg-emerald-50 p-3 rounded-xl border border-emerald-100 mt-4">
+                        <span class="text-sm font-bold text-emerald-700 uppercase">Amount Auto-Filled</span>
+                        <span class="text-xl font-black text-emerald-700" id="coUI_AmountPaid">₱0.00</span>
+                    </div>
+                `;
+            }
+
+            setTimeout(() => { calculateCheckout(); openModal('checkoutModal'); }, 300);
+        }
+
+        function handleDiscountChange() {
+            const val = document.getElementById('coDiscountSelect').value;
+            const customInput = document.getElementById('coCustomDiscount');
+            if (val === 'custom') customInput.classList.remove('hidden');
+            else customInput.classList.add('hidden');
+            calculateCheckout();
+        }
+
+        function calculateCheckout() {
+            const subtotal = currentData.subtotal;
+            const sc = currentData.sc;
+
+            let standardDiscountPct = 0;
+            const sel = document.getElementById('coDiscountSelect').value;
+            if (sel === 'custom') standardDiscountPct = parseFloat(document.getElementById('coCustomDiscount').value) || 0;
+            else standardDiscountPct = parseFloat(sel);
+
+            const standardDiscountAmt = subtotal * (standardDiscountPct / 100);
+            appliedDiscountAmt = standardDiscountAmt + appliedVoucherDiscount;
+
+            const discountedSubtotal = subtotal - appliedDiscountAmt;
+
+            const safeSubtotal = discountedSubtotal > 0 ? discountedSubtotal : 0;
+
+            const vatable = safeSubtotal / 1.12;
+            const vat = safeSubtotal - vatable;
+
+            finalGrandTotal = safeSubtotal + sc;
+
+            document.getElementById('coUI_Subtotal').innerText = `₱${subtotal.toFixed(2)}`;
+            document.getElementById('coUI_DiscountAmt').innerText = `-₱${appliedDiscountAmt.toFixed(2)}`;
+            document.getElementById('coUI_SC').innerText = `₱${sc.toFixed(2)}`;
+            document.getElementById('coUI_VAT').innerText = `₱${vat.toFixed(2)}`;
+            document.getElementById('coUI_GrandTotal').innerText = `₱${finalGrandTotal.toFixed(2)}`;
+
+            if (checkoutMethod === 'cash') {
+                const given = parseFloat(document.getElementById('coAmountGiven')?.value) || 0;
+                const change = given - finalGrandTotal;
+                document.getElementById('coUI_Change').innerText = change >= 0 ? `₱${change.toFixed(2)}` : "₱0.00";
+            } else {
+                const autoEl = document.getElementById('coUI_AmountPaid');
+                if (autoEl) autoEl.innerText = `₱${finalGrandTotal.toFixed(2)}`;
+            }
+        }
+
+        function submitCheckout() {
+            pendingPaymentPayload = {
+                transaction_id: currentTxId,
+                method: checkoutMethod,
+                amount_paid: finalGrandTotal,
+                discount: appliedDiscountAmt,
+                voucher_code: appliedVoucherCode
+            };
+
+            if (checkoutMethod === 'cash') {
+                const given = parseFloat(document.getElementById('coAmountGiven').value) || 0;
+                if (given < finalGrandTotal) return showAlert('Error', 'Amount given is insufficient.', 'error');
+
+                pendingPaymentPayload.amount_given = given;
+
+                document.getElementById('csCashDetails').classList.replace('hidden', 'flex');
+                document.getElementById('csRefDetails').classList.replace('flex', 'hidden');
+                document.getElementById('csGiven').innerText = `₱${given.toFixed(2)}`;
+                document.getElementById('csChange').innerText = `₱${(given - finalGrandTotal).toFixed(2)}`;
+            } else {
+                const ref = document.getElementById('coRefNum').value.trim();
+                if (!ref) return showAlert('Error', 'Reference Number is required.', 'error');
+                pendingPaymentPayload.reference_number = ref;
+
+                document.getElementById('csRefDetails').classList.replace('hidden', 'flex');
+                document.getElementById('csCashDetails').classList.replace('flex', 'hidden');
+                document.getElementById('csRefNum').innerText = ref;
+            }
+
+            document.getElementById('csMethod').innerText = checkoutMethod.toUpperCase();
+            document.getElementById('csTotal').innerText = `₱${finalGrandTotal.toFixed(2)}`;
+
+            closeModal('checkoutModal');
+
+            if (appliedDiscountAmt > 0 || appliedVoucherCode) {
+                authTargetAction = 'checkout';
+                document.getElementById('managerPassword').value = '';
+                setTimeout(() => openModal('managerAuthModal'), 300);
+            } else {
+                setTimeout(() => openModal('confirmSummaryModal'), 300);
+            }
+        }
+
+        async function finalizePayment() {
+            if (!pendingPaymentPayload || !currentTxId) return;
+
+            closeModal('confirmSummaryModal');
+            toggleLoader(true);
+            try {
+                const res = await fetch('/process_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingPaymentPayload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert('Payment Successful', 'Table cleared and bill closed.', 'success');
+
+                    const givenAmount = pendingPaymentPayload.amount_given || pendingPaymentPayload.amount_paid;
+                    const discAmount = pendingPaymentPayload.discount || 0;
+
+                    await fetch(`/print_official_receipt/${currentTxId}?given=${givenAmount}&discount=${discAmount}`);
+
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showAlert('Error', data.message, 'error');
+                }
+            } catch (e) {
+                showAlert('Error', 'Payment processing failed. Check console for details.', 'error');
+                console.error(e);
+            }
+            toggleLoader(false);
+        }
+
+        function selectMapTable(newTableId) {
+            const table = cashierTableData[newTableId];
+            if (!table) return;
+
+            if (mapSelectionMode === 'merge') {
+                if (table.status !== 'occupied') return showAlert('Action Denied', `Table ${table.name} is not occupied. You can only merge into an active table.`, 'error');
+
+                const targetTxn = tableToTxnMap[newTableId];
+                if (!targetTxn || targetTxn == currentTxId) return showAlert('Action Denied', 'Cannot merge into the same transaction or an empty table.', 'error');
+
+                mergeTargetTxnId = targetTxn;
+
+                closeModal('mapSelectionModal');
+                document.getElementById('mapActionManagerPassword').value = '';
+
+                document.getElementById('confirmMapActionTitle').innerText = 'Confirm Merge';
+                document.getElementById('confirmMapActionDesc').innerText = `Are you sure you want to merge the current tab into ${table.name}'s transaction? This cannot be undone.`;
+
+                document.getElementById('confirmMapActionBtn').onclick = () => executeMapAction(newTableId, table.name);
+                setTimeout(() => openModal('confirmMapActionModal'), 300);
+            } else {
+                if (table.status === 'occupied') return showAlert('Action Denied', `Table ${table.name} is currently occupied. Please select a vacant one.`, 'error');
+
+                closeModal('mapSelectionModal');
+                document.getElementById('mapActionManagerPassword').value = '';
+
+                document.getElementById('confirmMapActionTitle').innerText = mapSelectionMode === 'transfer' ? 'Confirm Transfer' : 'Confirm Add Table';
+                document.getElementById('confirmMapActionDesc').innerText = mapSelectionMode === 'transfer'
+                    ? `Are you sure you want to transfer this guest to ${table.name}?`
+                    : `Are you sure you want to add ${table.name} to this guest's transaction?`;
+
+                document.getElementById('confirmMapActionBtn').onclick = () => executeMapAction(newTableId, table.name);
+                setTimeout(() => openModal('confirmMapActionModal'), 300);
+            }
+        }
+
+        async function executeMapAction(newTableId, tableName) {
+            const pwd = document.getElementById('mapActionManagerPassword').value;
+            if (!pwd) return showAlert('Required', 'Please enter Manager Password.', 'error');
+
+            closeModal('confirmMapActionModal');
+            toggleLoader(true);
+
+            try {
+                const authRes = await fetch('/api/authorize_manager', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const authData = await authRes.json();
+
+                if (!authData.success) {
+                    toggleLoader(false);
+                    return showAlert('Access Denied', 'Invalid Manager Password.', 'error');
+                }
+
+                let endpoint = '';
+                let payload = { transaction_id: currentTxId };
+
+                if (mapSelectionMode === 'transfer') {
+                    endpoint = '/api/transfer_table';
+                    payload.new_table_id = newTableId;
+                } else if (mapSelectionMode === 'multiple') {
+                    endpoint = '/api/add_multiple_table';
+                    payload.new_table_id = newTableId;
+                } else if (mapSelectionMode === 'merge') {
+                    endpoint = '/api/merge_transactions';
+                    payload.source_transaction_id = currentTxId;
+                    payload.target_transaction_id = mergeTargetTxnId;
+                }
+
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert('Success', data.message, 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showAlert('Error', data.message, 'error');
+                }
+            } catch (err) { showAlert('Error', 'Network error during table update.', 'error'); }
+            toggleLoader(false);
+        }
+
+        async function confirmManagerAuth() {
+            const pwd = document.getElementById('managerPassword').value;
+            if (!pwd) return showAlert('Required', 'Please enter Manager Password', 'error');
+
+            closeModal('managerAuthModal');
+            toggleLoader(true);
+            try {
+                const authRes = await fetch('/api/authorize_manager', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const authData = await authRes.json();
+
+                if (authData.success) {
+                    if (authTargetAction === 'free') {
+                        await fetch(`/print_free_receipt/${currentTxId}?mgr=${encodeURIComponent(authData.manager_name)}`);
+
+                        const payRes = await fetch('/process_payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ transaction_id: currentTxId, method: 'free', amount_paid: 0 })
+                        });
+                        const payData = await payRes.json();
+
+                        if (payData.success) {
+                            showAlert('Success', 'Free of Charge Approved & Printed!', 'success');
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else showAlert('Error', 'Failed to process payment.', 'error');
+                        toggleLoader(false);
+                    } else if (authTargetAction === 'checkout') {
+                        toggleLoader(false);
+                        setTimeout(() => openModal('confirmSummaryModal'), 300);
+                    } else if (authTargetAction === 'split') {
+                        toggleLoader(false);
+                        setTimeout(() => openModal('confirmSplitSummaryModal'), 300);
+                    }
+                } else {
+                    toggleLoader(false);
+                    showAlert('Access Denied', 'Invalid Manager Password.', 'error');
+                    if (authTargetAction === 'checkout') setTimeout(() => openModal('checkoutModal'), 300);
+                    if (authTargetAction === 'split') setTimeout(() => openModal('splitBillModal'), 300);
+                }
+            } catch (err) {
+                toggleLoader(false);
+                showAlert('Error', 'System error during authorization.', 'error');
+            }
+        }
+
+        function triggerFreeOfCharge() {
+            if (!currentTxId) return showAlert('Action Denied', 'Please select a transaction.', 'error');
+            closeModal('paymentModal');
+            authTargetAction = 'free';
+            document.getElementById('managerPassword').value = '';
+            setTimeout(() => openModal('managerAuthModal'), 300);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const filterText = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#tableBody .table-item');
+
+            tableRows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                if (rowText.includes(filterText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        function triggerVoid(itemId, itemName, maxQty) {
+            itemToVoidId = itemId;
+            itemToVoidMaxQty = maxQty;
+
+            document.getElementById('voidItemName').innerText = itemName;
+            document.getElementById('voidMaxQtyUI').innerText = maxQty;
+            document.getElementById('voidQty').value = maxQty;
+            document.getElementById('voidQty').max = maxQty;
+
+            openModal('voidModal');
+        }
+
+        function handleVoidReasonChange() {
+            const select = document.getElementById('voidReasonSelect');
+            const otherInput = document.getElementById('voidOtherReason');
+            if (select.value === 'others') {
+                otherInput.classList.remove('hidden');
+            } else {
+                otherInput.classList.add('hidden');
+            }
+        }
+
+        async function confirmVoid() {
+            const qty = parseInt(document.getElementById('voidQty').value);
+            const reasonSelect = document.getElementById('voidReasonSelect').value;
+            const otherReason = document.getElementById('voidOtherReason').value;
+            const password = document.getElementById('voidManagerPassword').value;
+
+            const finalReason = reasonSelect === 'others' ? otherReason : reasonSelect;
+
+            if (!finalReason || !password || qty <= 0) {
+                showAlert('Error', 'Please fill in all fields correctly.', 'error');
+                return;
+            }
+
+            if (qty > itemToVoidMaxQty) {
+                showAlert('Error', 'Quantity exceeds available items.', 'error');
+                return;
+            }
+
+            closeModal('voidModal');
+            toggleLoader(true);
+
+            try {
+                const response = await fetch('/api/void_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: itemToVoidId,
+                        void_qty: qty,
+                        reason: finalReason,
+                        password: password
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Success', 'Item voided successfully!', 'success');
+                    loadTransactionDetails(currentTxId);
+                } else {
+                    showAlert('Error', result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error', 'Failed to connect to the server.', 'error');
+            } finally {
+                toggleLoader(false);
+            }
+        }
+
+        function rebuildTableToTxnMap(newTableBody) {
+            tableToTxnMap = {};
+            const rows = newTableBody.querySelectorAll('tr.table-item');
+            rows.forEach(row => {
+                const onclickStr = row.getAttribute('onclick');
+                if (!onclickStr) return;
+
+                const idMatch = onclickStr.match(/'(\d+)'/);
+                if (!idMatch) return;
+                const txnId = idMatch[1];
+
+                const tableStr = row.querySelector('td:nth-child(1) p:nth-child(2)').innerText;
+                if (tableStr && tableStr !== 'No Table') {
+                    tableStr.split(', ').forEach(tableName => {
+                        const tIdMatch = tableName.match(/\d+/);
+                        if (tIdMatch) {
+                            tableToTxnMap[tIdMatch[0]] = txnId;
+                        }
+                    });
+                }
+            });
+        }
+
+        setInterval(async () => {
+            try {
+                if (!document.getElementById('view-map').classList.contains('hidden')) {
+                    fetchCashierFloorplan();
+                }
+
+                const response = await fetch('/cashier');
+                if (!response.ok) return;
+
+                const htmlText = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(htmlText, 'text/html');
+
+                const currentTableBody = document.getElementById('tableBody');
+                const newTableBody = newDoc.getElementById('tableBody');
+                if (currentTableBody && newTableBody) {
+                    currentTableBody.innerHTML = newTableBody.innerHTML;
+
+                    rebuildTableToTxnMap(newTableBody);
+                }
+
+                const currentStats = document.querySelector('.grid.grid-cols-2.lg\\:grid-cols-2.gap-4.shrink-0');
+                const newStats = newDoc.querySelector('.grid.grid-cols-2.lg\\:grid-cols-2.gap-4.shrink-0');
+                if (currentStats && newStats) {
+                    currentStats.innerHTML = newStats.innerHTML;
+                }
+
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && searchInput.value) {
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+
+            } catch (err) {
+                console.error("Auto-update error:", err);
+            }
+        }, 5000);
+    </script>
+</body>
+
+</html>

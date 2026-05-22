@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datatelcom | Floor Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .draggable {
+            cursor: grab;
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+        }
+
+        .item-selected {
+            stroke: #1cb2b6 !important;
+            stroke-dasharray: 6;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -12;
+            }
+        }
+
+        /* HIDDEN NUMBER ARROWS */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .toolbar-btn {
+            transition: all 0.2s ease;
+        }
+
+        .toolbar-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Suble grid line styling */
+        .grid-pattern path {
+            stroke: #e2e8f0;
+            stroke-width: 1;
+        }
+    </style>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { primary: '#1cb2b6', primaryDark: '#17989b', dark: '#0f172a' } } } }
+    </script>
+</head>
+
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden">
+
+    <header
+        class="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0 shadow-sm z-20">
+        <div class="flex items-center gap-6">
+            <div
+                class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                <i class="fa-solid fa-pen-ruler"></i>
+            </div>
+            <div class="flex gap-2 border-l border-slate-200 pl-6">
+                <button onclick="addItem('table')"
+                    class="toolbar-btn bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2"><i
+                        class="fa-solid fa-chair"></i> Add Table</button>
+                <button onclick="addItem('text')"
+                    class="toolbar-btn bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2"><i
+                        class="fa-solid fa-font"></i> Add Text</button>
+                <button onclick="addItem('shape')"
+                    class="toolbar-btn bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2"><i
+                        class="fa-regular fa-square"></i> Add Shape</button>
+                <button onclick="addItem('line')"
+                    class="toolbar-btn bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2"><i
+                        class="fa-solid fa-minus"></i> Add Line</button>
+
+                <button onclick="document.getElementById('designUploadInput').click()"
+                    class="toolbar-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 border border-indigo-200 ml-2">
+                    <i class="fa-solid fa-image"></i> Add Image
+                </button>
+                <input type="file" id="designUploadInput" class="hidden" accept="image/png, image/jpeg, image/jpg"
+                    onchange="uploadDesignImage(event)">
+                
+                <button onclick="toggleGridSnap()" id="btnGridSnap"
+                    class="toolbar-btn bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 ml-2 border border-sky-200">
+                    <i class="fa-solid fa-border-all"></i> Snap: ON
+                </button>
+            </div>
+        </div>
+        <div class="flex gap-3 items-center">
+            <span id="unsavedBadge" class="hidden text-xs font-bold text-amber-500 mr-2 animate-pulse"><i
+                    class="fa-solid fa-circle-exclamation"></i> Unsaved Changes</span>
+
+            <button onclick="openSettingsModal()"
+                class="toolbar-btn bg-slate-100 text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2">
+                <i class="fa-solid fa-palette"></i> Status Colors
+            </button>
+
+            <button onclick="saveLayout()"
+                class="toolbar-btn bg-emerald-500 text-white hover:bg-emerald-600 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Save Layout
+            </button>
+            <button onclick="attemptExit()"
+                class="toolbar-btn bg-rose-50 text-rose-600 hover:bg-rose-100 px-5 py-2.5 rounded-xl text-sm font-bold transition-all">
+                Exit Editor
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow relative overflow-auto bg-[#fafafa] p-8 flex justify-center items-center">
+        <div class="bg-white border-2 border-slate-300 rounded-[2rem] shadow-xl overflow-hidden relative"
+            style="width: 1000px; height: 800px;">
+            <svg id="svgCanvas" width="1000" height="800" viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse" class="grid-pattern">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" />
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <g id="dynamic-elements"></g>
+                <g id="dynamic-tables"></g>
+            </svg>
+        </div>
+    </main>
+
+    <div id="universalEditorModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 flex flex-col transform scale-95 transition-transform modal-content relative border border-slate-200">
+            <button onclick="closeModal('universalEditorModal')"
+                class="absolute top-6 right-6 text-slate-400 hover:bg-slate-100 p-2.5 rounded-full"><i
+                    class="fa-solid fa-xmark"></i></button>
+
+            <h2 id="modalTitle" class="text-2xl font-black text-slate-900 mb-6">Edit Properties</h2>
+            <input type="hidden" id="editId">
+            <input type="hidden" id="editMainType">
+            <div class="space-y-4 mb-6 max-h-[50vh] overflow-y-auto pr-2">
+
+                <div id="groupTableOnly" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Table
+                            Name</label>
+                        <input type="text" id="editTableName"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Capacity</label>
+                        <input type="number" id="editCapacity"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div id="groupTextOnly" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Text
+                            Content</label>
+                        <input type="text" id="editContent"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Font
+                            Size</label>
+                        <input type="number" id="editFontSize"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div id="groupShapeSelection" class="hidden">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Shape
+                        Type</label>
+                    <select id="editShapeType" onchange="toggleDimensionsUI()"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                        <option value="circle">Circle / Round</option>
+                        <option value="rect">Rectangle / Long</option>
+                    </select>
+                </div>
+
+                <div id="groupDimensions" class="grid grid-cols-2 gap-4 hidden">
+                    <div>
+                        <label id="lblWidth"
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Width</label>
+                        <input type="number" id="editWidth"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                    <div id="heightContainer">
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Height</label>
+                        <input type="number" id="editHeight"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div id="groupLineCoords" class="grid grid-cols-2 gap-4 hidden">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">End X
+                            (X2)</label>
+                        <input type="number" id="editX2"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">End Y
+                            (Y2)</label>
+                        <input type="number" id="editY2"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 relative">
+                    <div id="colFill">
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fill</label>
+                        <input type="color" id="editFillColor"
+                            class="w-full h-10 rounded cursor-pointer border border-slate-200">
+
+                        <div id="transparentToggleContainer" class="hidden items-center gap-1.5 mt-2">
+                            <input type="checkbox" id="isTransparent" onchange="toggleTransparent()"
+                                class="w-3 h-3 accent-primary">
+                            <label for="isTransparent"
+                                class="text-[10px] font-bold text-slate-500 cursor-pointer">Transparent</label>
+                        </div>
+                    </div>
+
+                    <div id="colStroke">
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stroke</label>
+                        <input type="color" id="editStrokeColor"
+                            class="w-full h-10 rounded cursor-pointer border border-slate-200">
+                    </div>
+
+                    <div id="colText">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Text
+                            Color</label>
+                        <input type="color" id="editTextColor"
+                            class="w-full h-10 rounded cursor-pointer border border-slate-200">
+                    </div>
+                </div>
+
+                <div id="groupStrokeW" class="hidden">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 mt-2">Line
+                        Thickness</label>
+                    <input type="number" id="editStrokeWidth"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                </div>
+
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="deleteActiveItem()"
+                    class="w-1/3 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl transition-all shadow-sm"><i
+                        class="fa-solid fa-trash"></i> Delete</button>
+                <button onclick="saveActiveItem()"
+                    class="flex-1 py-3.5 bg-primary hover:bg-primaryDark text-white font-bold rounded-xl shadow-lg transition-all">Apply
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmExitModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[600] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div
+                class="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-amber-100">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-xl font-black text-slate-900 mb-2">Unsaved Changes</h2>
+            <p class="text-sm font-medium text-slate-500 mb-6">You have unsaved changes. Are you sure you want to exit
+                without saving?</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('confirmExitModal')"
+                    class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all">Cancel</button>
+                <button onclick="window.location.href='/manager'"
+                    class="flex-1 py-3.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-lg transition-all">Yes,
+                    Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="noticeModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[700] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div id="noticeIcon"
+                class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2"></div>
+            <h2 id="noticeTitle" class="text-xl font-black text-slate-900 mb-2">Notice</h2>
+            <p id="noticeMessage" class="text-sm font-medium text-slate-500 mb-6">Message here</p>
+            <button onclick="closeModal('noticeModal')"
+                class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all">Okay</button>
+        </div>
+    </div>
+
+    <div id="settingsModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[600] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 flex flex-col transform scale-95 transition-transform modal-content relative border border-slate-200">
+            <button onclick="closeModal('settingsModal')"
+                class="absolute top-6 right-6 text-slate-400 hover:bg-slate-100 p-2.5 rounded-full"><i
+                    class="fa-solid fa-xmark"></i></button>
+
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-blue-100">
+                <i class="fa-solid fa-palette"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 mb-2 text-center">Status Colors</h2>
+            <p class="text-xs font-medium text-slate-500 mb-6 text-center">Set the dynamic colors for all tables based
+                on their status.</p>
+
+            <div class="space-y-4 mb-6">
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <p class="text-xs font-black text-slate-800">Vacant Color</p>
+                        <p class="text-[10px] font-bold text-slate-400">Tables with no guests</p>
+                    </div>
+                    <input type="color" id="settingColorVacant"
+                        class="w-12 h-10 rounded cursor-pointer border border-slate-200 bg-white">
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <p class="text-xs font-black text-slate-800">Occupied Color</p>
+                        <p class="text-[10px] font-bold text-slate-400">Tables with active orders</p>
+                    </div>
+                    <input type="color" id="settingColorOccupied"
+                        class="w-12 h-10 rounded cursor-pointer border border-slate-200 bg-white">
+                </div>
+            </div>
+
+            <button onclick="saveGlobalSettings()"
+                class="w-full py-3.5 bg-primary hover:bg-primaryDark text-white font-bold rounded-xl shadow-lg transition-all">Save
+                Colors</button>
+        </div>
+    </div>
+
+    <script>
+        let layoutData = { tables: {}, elements: {} };
+        let globalSettings = { color_vacant: '#D9C8A9', color_occupied: '#E47E61' };
+        let deletedTables = [];
+        let deletedElements = [];
+        let hasUnsavedChanges = false;
+
+        let isDragging = false;
+        let dragTarget = null;
+        let dragType = '';
+        let dragId = '';
+        let offsetX, offsetY;
+
+        // NEW: Snap to Grid Settings
+        let snapToGrid = true;
+        const GRID_SIZE = 20;
+
+        window.onload = () => fetchData();
+
+        function toggleGridSnap() {
+            snapToGrid = !snapToGrid;
+            const btn = document.getElementById('btnGridSnap');
+            if(snapToGrid) {
+                btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Snap: ON';
+                btn.className = "toolbar-btn bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 ml-2 border border-sky-200";
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-border-none"></i> Snap: OFF';
+                btn.className = "toolbar-btn bg-slate-100 hover:bg-slate-200 text-slate-500 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 ml-2 border border-slate-200";
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/floorplan/data');
+                const data = await res.json();
+                if (data.success) {
+                    layoutData.tables = data.tables;
+                    layoutData.elements = data.elements;
+                    if (data.settings) {
+                        globalSettings.color_vacant = data.settings.color_vacant || '#D9C8A9';
+                        globalSettings.color_occupied = data.settings.color_occupied || '#E47E61';
+                    }
+                    renderCanvas();
+                }
+            } catch (err) { console.log('Notice: Failed to fetch data. Waiting for save.'); }
+        }
+
+        // ---------- IMAGE UPLOAD LOGIC ----------
+        async function uploadDesignImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const res = await fetch('/api/manager/floorplan/upload_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const tempId = 'temp_' + Date.now();
+                    layoutData.elements[tempId] = {
+                        id: tempId,
+                        elType: 'image',
+                        content: data.path, // Store the image URL
+                        posX: snapToGrid ? Math.round(500/GRID_SIZE)*GRID_SIZE : 500,
+                        posY: snapToGrid ? Math.round(400/GRID_SIZE)*GRID_SIZE : 400,
+                        width: 150,
+                        height: 150
+                    };
+                    markUnsaved();
+                    renderCanvas();
+                    showNotice('Success', 'Image added to floorplan.', 'success');
+                } else {
+                    showNotice('Error', data.message, 'error');
+                }
+            } catch (err) {
+                showNotice('Error', 'Failed to upload image.', 'error');
+            }
+            event.target.value = '';
+        }
+
+        function markUnsaved() {
+            hasUnsavedChanges = true;
+            document.getElementById('unsavedBadge').classList.remove('hidden');
+        }
+        function clearUnsaved() {
+            hasUnsavedChanges = false;
+            document.getElementById('unsavedBadge').classList.add('hidden');
+        }
+
+        // ---------- RENDERING ----------
+        function renderCanvas() {
+            document.getElementById('dynamic-tables').innerHTML = '';
+            document.getElementById('dynamic-elements').innerHTML = '';
+
+            for (let id in layoutData.elements) {
+                renderElement(layoutData.elements[id], id);
+            }
+            for (let id in layoutData.tables) {
+                renderTable(layoutData.tables[id], id);
+            }
+        }
+
+        function renderTable(t, dictKey) {
+            const itemKey = dictKey !== undefined ? dictKey : t.id;
+            const container = document.getElementById('dynamic-tables');
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'draggable hover:opacity-80 transition-opacity');
+            g.setAttribute('data-id', itemKey);
+            g.setAttribute('data-type', 'table');
+            g.addEventListener('mousedown', startDrag);
+            g.addEventListener('click', (e) => { if (!isDragging) openEditor('table', itemKey); });
+
+            let shapeEl;
+            if (t.shape === 'rect') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shapeEl.setAttribute('x', t.posX - (t.width / 2));
+                shapeEl.setAttribute('y', t.posY - (t.height / 2));
+                shapeEl.setAttribute('width', t.width);
+                shapeEl.setAttribute('height', t.height);
+                shapeEl.setAttribute('rx', 8);
+            } else {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                shapeEl.setAttribute('cx', t.posX);
+                shapeEl.setAttribute('cy', t.posY);
+                shapeEl.setAttribute('r', t.width / 2);
+            }
+
+            let actualFill = 'transparent';
+            if (t.fillColor !== 'transparent') {
+                actualFill = t.status === 'occupied' ? globalSettings.color_occupied : globalSettings.color_vacant;
+            }
+            shapeEl.setAttribute('fill', actualFill);
+            shapeEl.setAttribute('stroke', t.strokeColor);
+            shapeEl.setAttribute('stroke-width', '4');
+            shapeEl.setAttribute('class', 'target-shape transition-all');
+
+            const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textEl.setAttribute('x', t.posX);
+            textEl.setAttribute('y', t.posY + 5);
+            textEl.setAttribute('font-size', '14');
+            textEl.setAttribute('font-weight', '900');
+            textEl.setAttribute('fill', t.textColor);
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('pointer-events', 'none');
+            textEl.textContent = t.name.replace('Table-', 'T');
+
+            g.appendChild(shapeEl);
+            g.appendChild(textEl);
+            container.appendChild(g);
+        }
+
+        function renderElement(e, dictKey) {
+            const itemKey = dictKey !== undefined ? dictKey : e.id;
+            const container = document.getElementById('dynamic-elements');
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'draggable hover:opacity-80 transition-opacity');
+            g.setAttribute('data-id', itemKey);
+            g.setAttribute('data-type', 'element');
+            g.addEventListener('mousedown', startDrag);
+            g.addEventListener('click', (evt) => { if (!isDragging) openEditor('element', itemKey); });
+
+            let shapeEl;
+
+            if (e.elType === 'line') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                shapeEl.setAttribute('x1', e.posX);
+                shapeEl.setAttribute('y1', e.posY);
+                shapeEl.setAttribute('x2', e.posX2);
+                shapeEl.setAttribute('y2', e.posY2);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                shapeEl.setAttribute('stroke-linecap', 'round');
+                shapeEl.setAttribute('class', 'target-shape transition-all');
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'text') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                shapeEl.setAttribute('x', e.posX);
+                shapeEl.setAttribute('y', e.posY);
+                shapeEl.setAttribute('font-size', e.fontSize);
+                shapeEl.setAttribute('font-family', "'Plus Jakarta Sans', sans-serif");
+                shapeEl.setAttribute('font-weight', '900');
+                shapeEl.setAttribute('fill', e.textColor);
+                shapeEl.setAttribute('text-anchor', 'middle');
+                shapeEl.setAttribute('class', 'target-shape transition-all cursor-pointer');
+                shapeEl.textContent = e.content;
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'shape') {
+                if (e.shapeType === 'rect') {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                    shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                    shapeEl.setAttribute('width', e.width);
+                    shapeEl.setAttribute('height', e.height);
+                    shapeEl.setAttribute('rx', 8);
+                } else {
+                    shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    shapeEl.setAttribute('cx', e.posX);
+                    shapeEl.setAttribute('cy', e.posY);
+                    shapeEl.setAttribute('r', e.width / 2);
+                }
+                shapeEl.setAttribute('fill', e.fillColor);
+                shapeEl.setAttribute('stroke', e.strokeColor);
+                shapeEl.setAttribute('stroke-width', e.strokeWidth);
+                shapeEl.setAttribute('class', 'target-shape transition-all');
+                g.appendChild(shapeEl);
+            }
+            else if (e.elType === 'image') {
+                shapeEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                shapeEl.setAttribute('href', e.content);
+                shapeEl.setAttribute('x', e.posX - (e.width / 2));
+                shapeEl.setAttribute('y', e.posY - (e.height / 2));
+                shapeEl.setAttribute('width', e.width);
+                shapeEl.setAttribute('height', e.height);
+                shapeEl.setAttribute('preserveAspectRatio', 'none');
+                shapeEl.setAttribute('class', 'target-shape transition-all');
+                g.appendChild(shapeEl);
+            }
+
+            container.appendChild(g);
+        }
+
+        // ---------- DRAG AND DROP ----------
+        function startDrag(evt) {
+            isDragging = false;
+            dragTarget = evt.currentTarget;
+            dragType = dragTarget.getAttribute('data-type');
+            dragId = dragTarget.getAttribute('data-id');
+
+            const item = dragType === 'table' ? layoutData.tables[dragId] : layoutData.elements[dragId];
+
+            const svg = document.getElementById('svgCanvas');
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX; pt.y = evt.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+            offsetX = cursorPt.x - item.posX;
+            offsetY = cursorPt.y - item.posY;
+
+            dragTarget.querySelector('.target-shape').classList.add('item-selected');
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', endDrag);
+        }
+
+        function drag(evt) {
+            isDragging = true;
+            if (!dragTarget) return;
+
+            const svg = document.getElementById('svgCanvas');
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX; pt.y = evt.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+            // NEW: Added Grid Snapping Logic
+            let rawX = cursorPt.x - offsetX;
+            let rawY = cursorPt.y - offsetY;
+
+            const newX = snapToGrid ? Math.round(rawX / GRID_SIZE) * GRID_SIZE : Math.round(rawX);
+            const newY = snapToGrid ? Math.round(rawY / GRID_SIZE) * GRID_SIZE : Math.round(rawY);
+
+            const item = dragType === 'table' ? layoutData.tables[dragId] : layoutData.elements[dragId];
+            const shape = dragTarget.querySelector('.target-shape');
+
+            // Handle Tables, Shapes, and Images
+            if (dragType === 'table' || (dragType === 'element' && item.elType === 'shape') || (dragType === 'element' && item.elType === 'image')) {
+                const text = dragTarget.querySelector('text');
+                if (item.shapeType === 'rect' || item.shape === 'rect' || item.elType === 'image') {
+                    shape.setAttribute('x', newX - (item.width / 2));
+                    shape.setAttribute('y', newY - (item.height / 2));
+                } else {
+                    shape.setAttribute('cx', newX);
+                    shape.setAttribute('cy', newY);
+                }
+                if (text) {
+                    text.setAttribute('x', newX);
+                    text.setAttribute('y', newY + 5);
+                }
+            }
+            else if (item.elType === 'text') {
+                shape.setAttribute('x', newX);
+                shape.setAttribute('y', newY);
+            }
+            else if (item.elType === 'line') {
+                const diffX = newX - item.posX;
+                const diffY = newY - item.posY;
+                shape.setAttribute('x1', newX);
+                shape.setAttribute('y1', newY);
+                shape.setAttribute('x2', item.posX2 + diffX);
+                shape.setAttribute('y2', item.posY2 + diffY);
+                dragTarget.setAttribute('data-temp-x2', item.posX2 + diffX);
+                dragTarget.setAttribute('data-temp-y2', item.posY2 + diffY);
+            }
+
+            dragTarget.setAttribute('data-temp-x', newX);
+            dragTarget.setAttribute('data-temp-y', newY);
+        }
+
+        function endDrag() {
+            if (dragTarget) {
+                dragTarget.querySelector('.target-shape').classList.remove('item-selected');
+                if (isDragging) {
+                    const newX = dragTarget.getAttribute('data-temp-x');
+                    const newY = dragTarget.getAttribute('data-temp-y');
+
+                    if (newX && newY) {
+                        const item = dragType === 'table' ? layoutData.tables[dragId] : layoutData.elements[dragId];
+                        item.posX = parseInt(newX);
+                        item.posY = parseInt(newY);
+
+                        if (item.elType === 'line') {
+                            item.posX2 = parseInt(dragTarget.getAttribute('data-temp-x2'));
+                            item.posY2 = parseInt(dragTarget.getAttribute('data-temp-y2'));
+                        }
+                        markUnsaved();
+                    }
+                }
+                dragTarget = null;
+            }
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', endDrag);
+            setTimeout(() => { isDragging = false; }, 50);
+        }
+
+        // ---------- ADD NEW ITEMS ----------
+        function addItem(type) {
+            const tempId = 'temp_' + Date.now();
+            // Snap new items to grid automatically
+            const startX = snapToGrid ? Math.round(500/GRID_SIZE)*GRID_SIZE : 500;
+            const startY = snapToGrid ? Math.round(400/GRID_SIZE)*GRID_SIZE : 400;
+
+            if (type === 'table') {
+                layoutData.tables[tempId] = {
+                    id: tempId, name: `T-${Object.keys(layoutData.tables).length + 1}`, capacity: 4, shape: 'circle',
+                    posX: startX, posY: startY, width: 64, height: 64, status: 'vacant',
+                    fillColor: '#D9C8A9', strokeColor: '#544031', textColor: '#544031'
+                };
+            } else if (type === 'text') {
+                layoutData.elements[tempId] = {
+                    id: tempId, elType: 'text', content: 'Custom Text', fontSize: 32,
+                    posX: startX, posY: startY, textColor: '#544031'
+                };
+            } else if (type === 'shape') {
+                layoutData.elements[tempId] = {
+                    id: tempId, elType: 'shape', shapeType: 'rect',
+                    posX: startX, posY: startY, width: 200, height: 100,
+                    fillColor: '#E2E8F0', strokeColor: '#94A3B8', strokeWidth: 4
+                };
+            } else if (type === 'line') {
+                const startX2 = snapToGrid ? Math.round(600/GRID_SIZE)*GRID_SIZE : 600;
+                layoutData.elements[tempId] = {
+                    id: tempId, elType: 'line',
+                    posX: startX - 100, posY: startY, posX2: startX2, posY2: startY,
+                    strokeColor: '#94A3B8', strokeWidth: 8
+                };
+            }
+            markUnsaved();
+            renderCanvas();
+        }
+
+        // ---------- TOGGLE TRANSPARENT ----------
+        function toggleTransparent() {
+            const isTrans = document.getElementById('isTransparent').checked;
+            const fillInput = document.getElementById('editFillColor');
+            const strokeInput = document.getElementById('editStrokeColor');
+
+            if (isTrans) {
+                fillInput.disabled = true;
+                strokeInput.disabled = true;
+                fillInput.classList.add('opacity-50');
+                strokeInput.classList.add('opacity-50');
+            } else {
+                fillInput.disabled = false;
+                strokeInput.disabled = false;
+                fillInput.classList.remove('opacity-50');
+                strokeInput.classList.remove('opacity-50');
+            }
+        }
+
+        // ---------- EDITOR MODAL ----------
+        function openEditor(mainType, id) {
+            document.getElementById('editMainType').value = mainType;
+            document.getElementById('editId').value = id;
+
+            const item = mainType === 'table' ? layoutData.tables[id] : layoutData.elements[id];
+
+            ['groupTableOnly', 'groupTextOnly', 'groupShapeSelection', 'groupDimensions', 'groupLineCoords', 'groupStrokeW'].forEach(el => document.getElementById(el).classList.add('hidden'));
+            document.getElementById('colFill').classList.remove('hidden');
+            document.getElementById('colStroke').classList.remove('hidden');
+            document.getElementById('colText').classList.remove('hidden');
+
+            if (mainType === 'table') {
+                document.getElementById('modalTitle').innerText = 'Edit Table Properties';
+                document.getElementById('groupTableOnly').classList.remove('hidden');
+                document.getElementById('groupShapeSelection').classList.remove('hidden');
+                document.getElementById('groupDimensions').classList.remove('hidden');
+
+                document.getElementById('transparentToggleContainer').classList.remove('hidden');
+                document.getElementById('transparentToggleContainer').classList.add('flex');
+
+                document.getElementById('editTableName').value = item.name;
+                document.getElementById('editCapacity').value = item.capacity;
+                document.getElementById('editShapeType').value = item.shape;
+                document.getElementById('editWidth').value = item.width;
+                document.getElementById('editHeight').value = item.height;
+
+                if (item.fillColor === 'transparent') {
+                    document.getElementById('isTransparent').checked = true;
+                    document.getElementById('editFillColor').value = '#ffffff';
+                    document.getElementById('editStrokeColor').value = '#ffffff';
+                } else {
+                    document.getElementById('isTransparent').checked = false;
+                    document.getElementById('editFillColor').value = item.fillColor;
+                    document.getElementById('editStrokeColor').value = item.strokeColor;
+                }
+
+                document.getElementById('editTextColor').value = item.textColor;
+                toggleDimensionsUI();
+                toggleTransparent();
+            }
+            else {
+                document.getElementById('transparentToggleContainer').classList.add('hidden');
+                document.getElementById('transparentToggleContainer').classList.remove('flex');
+
+                if (item.elType === 'text') {
+                    document.getElementById('modalTitle').innerText = 'Edit Text';
+                    document.getElementById('groupTextOnly').classList.remove('hidden');
+                    document.getElementById('colFill').classList.add('hidden');
+                    document.getElementById('colStroke').classList.add('hidden');
+
+                    document.getElementById('editContent').value = item.content;
+                    document.getElementById('editFontSize').value = item.fontSize;
+                    document.getElementById('editTextColor').value = item.textColor;
+                }
+                else if (item.elType === 'shape') {
+                    document.getElementById('modalTitle').innerText = 'Edit Shape';
+                    document.getElementById('groupShapeSelection').classList.remove('hidden');
+                    document.getElementById('groupDimensions').classList.remove('hidden');
+                    document.getElementById('groupStrokeW').classList.remove('hidden');
+                    document.getElementById('colText').classList.add('hidden');
+
+                    document.getElementById('editShapeType').value = item.shapeType;
+                    document.getElementById('editWidth').value = item.width;
+                    document.getElementById('editHeight').value = item.height;
+                    document.getElementById('editStrokeWidth').value = item.strokeWidth;
+                    document.getElementById('editFillColor').value = item.fillColor;
+                    document.getElementById('editStrokeColor').value = item.strokeColor;
+                    toggleDimensionsUI();
+                }
+                else if (item.elType === 'line') {
+                    document.getElementById('modalTitle').innerText = 'Edit Line';
+                    document.getElementById('groupLineCoords').classList.remove('hidden');
+                    document.getElementById('groupStrokeW').classList.remove('hidden');
+                    document.getElementById('colFill').classList.add('hidden');
+                    document.getElementById('colText').classList.add('hidden');
+
+                    document.getElementById('editX2').value = item.posX2;
+                    document.getElementById('editY2').value = item.posY2;
+                    document.getElementById('editStrokeWidth').value = item.strokeWidth;
+                    document.getElementById('editStrokeColor').value = item.strokeColor;
+                }
+                else if (item.elType === 'image') {
+                    document.getElementById('modalTitle').innerText = 'Edit Image Size';
+                    document.getElementById('groupDimensions').classList.remove('hidden');
+
+                    document.getElementById('editWidth').value = item.width;
+                    document.getElementById('editHeight').value = item.height;
+
+                    // Hide color pickers
+                    document.getElementById('colFill').classList.add('hidden');
+                    document.getElementById('colStroke').classList.add('hidden');
+                    document.getElementById('colText').classList.add('hidden');
+                }
+            }
+
+            openModal('universalEditorModal');
+        }
+
+        function toggleDimensionsUI() {
+            const shape = document.getElementById('editShapeType').value;
+            const hc = document.getElementById('heightContainer');
+            if (shape === 'circle') {
+                hc.classList.add('opacity-50', 'pointer-events-none');
+                document.getElementById('lblWidth').innerText = 'Diameter';
+            } else {
+                hc.classList.remove('opacity-50', 'pointer-events-none');
+                document.getElementById('lblWidth').innerText = 'Width';
+            }
+        }
+
+        function saveActiveItem() {
+            const mainType = document.getElementById('editMainType').value;
+            const id = document.getElementById('editId').value;
+            const item = mainType === 'table' ? layoutData.tables[id] : layoutData.elements[id];
+
+            if (mainType === 'table') {
+                item.name = document.getElementById('editTableName').value;
+                item.capacity = document.getElementById('editCapacity').value;
+                item.shape = document.getElementById('editShapeType').value;
+                item.width = document.getElementById('editWidth').value;
+                item.height = document.getElementById('editHeight').value;
+
+                const isTrans = document.getElementById('isTransparent').checked;
+                item.fillColor = isTrans ? 'transparent' : document.getElementById('editFillColor').value;
+                item.strokeColor = isTrans ? 'transparent' : document.getElementById('editStrokeColor').value;
+
+                item.textColor = document.getElementById('editTextColor').value;
+            } else {
+                if (item.elType === 'text') {
+                    item.content = document.getElementById('editContent').value;
+                    item.fontSize = document.getElementById('editFontSize').value;
+                    item.textColor = document.getElementById('editTextColor').value;
+                } else if (item.elType === 'shape') {
+                    item.shapeType = document.getElementById('editShapeType').value;
+                    item.width = document.getElementById('editWidth').value;
+                    item.height = document.getElementById('editHeight').value;
+                    item.strokeWidth = document.getElementById('editStrokeWidth').value;
+                    item.fillColor = document.getElementById('editFillColor').value;
+                    item.strokeColor = document.getElementById('editStrokeColor').value;
+                } else if (item.elType === 'line') {
+                    item.posX2 = parseInt(document.getElementById('editX2').value);
+                    item.posY2 = parseInt(document.getElementById('editY2').value);
+                    item.strokeWidth = document.getElementById('editStrokeWidth').value;
+                    item.strokeColor = document.getElementById('editStrokeColor').value;
+                } else if (item.elType === 'image') {
+                    item.width = parseInt(document.getElementById('editWidth').value) || 150;
+                    item.height = parseInt(document.getElementById('editHeight').value) || 150;
+                }
+            }
+
+            markUnsaved();
+            closeModal('universalEditorModal');
+            renderCanvas();
+        }
+
+        function deleteActiveItem() {
+            const mainType = document.getElementById('editMainType').value;
+            const id = document.getElementById('editId').value;
+
+            if (!String(id).startsWith('temp_')) {
+                // Extract the numeric DB id from the dict key (e.g. "t_5" → 5, "e_3" → 3)
+                const numericId = String(id).replace(/^[a-z]+_/i, '');
+                if (mainType === 'table') deletedTables.push(numericId);
+                else deletedElements.push(numericId);
+            }
+
+            if (mainType === 'table') delete layoutData.tables[id];
+            else delete layoutData.elements[id];
+
+            markUnsaved();
+            closeModal('universalEditorModal');
+            renderCanvas();
+        }
+
+        // ---------- SAVING & EXIT ----------
+        async function saveLayout() {
+            // Strip the "t_" / "e_" key prefix from saved items so the backend gets the real numeric DB id
+            function stripPrefix(item) {
+                const cleaned = Object.assign({}, item);
+                if (typeof cleaned.id === 'string' && /^[a-z]+_\d+$/i.test(cleaned.id)) {
+                    cleaned.id = cleaned.id.replace(/^[a-z]+_/i, '');
+                }
+                return cleaned;
+            }
+            const payload = {
+                tables: Object.values(layoutData.tables).map(stripPrefix),
+                elements: Object.values(layoutData.elements).map(stripPrefix),
+                deletedTables: deletedTables,
+                deletedElements: deletedElements
+            };
+
+            try {
+                const res = await fetch('/api/manager/floorplan/bulk_save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showNotice('Success', data.message, 'success');
+                    deletedTables = [];
+                    deletedElements = [];
+                    clearUnsaved();
+                    fetchData();
+                } else showNotice('Error', data.message, 'error');
+            } catch (err) { showNotice('Error', 'Server connection failed.', 'error'); }
+        }
+
+        function attemptExit() {
+            if (hasUnsavedChanges) {
+                openModal('confirmExitModal');
+            } else {
+                window.location.href = '/manager';
+            }
+        }
+
+        // ---------- SETTINGS MODAL & API ----------
+        function openSettingsModal() {
+            document.getElementById('settingColorVacant').value = globalSettings.color_vacant;
+            document.getElementById('settingColorOccupied').value = globalSettings.color_occupied;
+            openModal('settingsModal');
+        }
+
+        async function saveGlobalSettings() {
+            const payload = {
+                color_vacant: document.getElementById('settingColorVacant').value,
+                color_occupied: document.getElementById('settingColorOccupied').value
+            };
+
+            try {
+                const res = await fetch('/api/manager/settings/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    globalSettings = payload;
+                    closeModal('settingsModal');
+                    renderCanvas();
+                    showNotice('Success', 'Global colors updated.', 'success');
+                } else {
+                    showNotice('Error', data.message, 'error');
+                }
+            } catch (err) { showNotice('Error', 'Failed to save settings.', 'error'); }
+        }
+
+        // ---------- UI HELPERS ----------
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.replace('opacity-0', 'opacity-100'); m.querySelector('.modal-content').classList.remove('scale-95'); }, 10);
+        }
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.replace('opacity-100', 'opacity-0'); m.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+        }
+        function showNotice(title, message, type = 'info') {
+            document.getElementById('noticeTitle').innerText = title;
+            document.getElementById('noticeMessage').innerText = message;
+            const icon = document.getElementById('noticeIcon');
+            icon.className = `w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 ${type === 'success' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : type === 'error' ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-blue-50 text-blue-500 border-blue-100'}`;
+            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-check"></i>' : type === 'error' ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-info"></i>';
+            openModal('noticeModal');
+        }
+    </script>
+</body>
+
+</html>

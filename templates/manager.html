@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Management System - Manager</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { primary: '#1d4ed8', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+
+        .sidebar-btn.active {
+            background: #1d4ed8;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(29, 78, 216, 0.3);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: flex;
+            opacity: 1;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* HIDE ARROWS ON NUMBER INPUTS */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Make sure the date picker stays above everything */
+        .daterangepicker {
+            z-index: 2000 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .daterangepicker .ranges li.active {
+            background-color: #1d4ed8 !important;
+        }
+
+        .daterangepicker td.active,
+        .daterangepicker td.active:hover {
+            background-color: #1d4ed8 !important;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="h-screen flex overflow-hidden">
+
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-20 shrink-0 shadow-sm">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-10">
+                <div
+                    class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
+                    <i class="fa-solid fa-table-list"></i>
+                </div>
+                <h1 class="text-base font-black text-slate-800 tracking-tighter uppercase leading-tight">
+                    Table <span class="text-primary">Management</span>
+                    <span class="block text-[10px] text-slate-400 tracking-widest mt-0.5">System</span>
+                </h1>
+            </div>
+
+            <nav class="space-y-2">
+                <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab"
+                    class="sidebar-btn active w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 ">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </button>
+                <button onclick="switchTab('historyTab')" id="btn-historyTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 ">
+                    <i class="fa-solid fa-clock-rotate-left w-5"></i> Transactions
+                </button>
+                <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 ">
+                    <i class="fa-solid fa-boxes-stacked w-5"></i> Inventory
+                </button>
+                <button onclick="switchTab('staffTab')" id="btn-staffTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 ">
+                    <i class="fa-solid fa-user-tie w-5"></i> Staff
+                </button>
+                <button onclick="switchTab('shiftTab')" id="btn-shiftTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 ">
+                    <i class="fa-solid fa-cash-register w-5"></i> Shift & Drawer
+                </button>
+                <button onclick="switchTab('voucherTab')" id="btn-voucherTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500">
+                    <i class="fa-solid fa-ticket w-5"></i> Vouchers
+                </button>
+
+                <button onclick="window.location.href='/floorplan_editor'" id="btn-floorplanTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                    <i class="fa-solid fa-map-location-dot w-5"></i> Floor Plan Editor
+                </button>
+
+                <button onclick="switchTab('settingsTab')" id="btn-settingsTab"
+                    class="sidebar-btn w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all text-slate-500">
+                    <i class="fa-solid fa-gear w-5"></i> Settings
+                </button>
+            </nav>
+        </div>
+
+        <div class="mt-auto p-8 border-t border-slate-50">
+            <button onclick="openModal('logoutModal')"
+                class="w-full flex items-center justify-center gap-2 px-5 py-4 bg-rose-50 text-rose-600 rounded-2xl text-sm font-bold hover:bg-rose-600 hover:text-white transition-all">
+                <i class="fa-solid fa-power-off"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 h-screen overflow-hidden relative bg-slate-50">
+
+        <main id="dashboardTab"
+            class="tab-content active h-full flex-col p-10 overflow-y-auto custom-scrollbar w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-10 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">System Analytics</h2>
+                    <p class="text-slate-500 font-medium">Monitoring real-time performance for today.</p>
+                </div>
+
+                <div class="flex gap-4 bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 pl-2">Filter
+                            Date Range</label>
+                        <div id="dashboardDateRange"
+                            class="bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-800 outline-none hover:border-primary transition-all cursor-pointer flex justify-between items-center w-[300px]">
+                            <span><i class="fa-regular fa-calendar text-primary mr-2"></i> <span
+                                    class="date-text">Select Date</span></span>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button onclick="exportDashboardToExcel(this)"
+                            class="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 h-[42px]">
+                            <i class="fa-solid fa-file-excel"></i> Export
+                        </button>
+                        <button onclick="refreshDashboard(this)"
+                            class="px-5 py-2.5 bg-dark text-white rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 w-12 h-[42px]">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-6 mb-6 shrink-0">
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                    <div class="relative z-10 flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross
+                                Revenue (With VAT)</p>
+                            <h3 id="stat-revenue" class="text-3xl font-black text-slate-900">₱ 0.00</h3>
+                        </div>
+                        <div
+                            class="hidden flex flex-col gap-1 bg-slate-50 rounded-lg p-1 border border-slate-200 shadow-inner">
+                            <button id="btnVatInc" onclick="toggleVat(true)"
+                                class="px-2 py-1 bg-white shadow-sm rounded text-[8px] font-black uppercase text-primary transition-all">w/
+                                VAT</button>
+                            <button id="btnVatExc" onclick="toggleVat(false)"
+                                class="px-2 py-1 text-slate-400 rounded text-[8px] font-black uppercase hover:text-slate-600 transition-all">No
+                                VAT</button>
+                        </div>
+                    </div>
+                    <i
+                        class="fa-solid fa-peso-sign absolute -right-4 -bottom-4 text-6xl text-slate-100 group-hover:scale-110 transition-transform"></i>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Sales (No
+                            VAT)</p>
+                        <h3 id="stat-net-sales" class="text-3xl font-black text-emerald-500">₱ 0.00</h3>
+                    </div>
+                    <i
+                        class="fa-solid fa-wallet absolute -right-4 -bottom-4 text-6xl text-slate-100 group-hover:scale-110 transition-transform"></i>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Discounts
+                        </p>
+                        <h3 id="stat-discounts" class="text-3xl font-black text-amber-500">₱ 0.00</h3>
+                    </div>
+                    <i
+                        class="fa-solid fa-tags absolute -right-4 -bottom-4 text-6xl text-slate-100 group-hover:scale-110 transition-transform"></i>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                    <div class="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Voids &
+                                Refunds</p>
+                            <h3 id="stat-voids" class="text-3xl font-black text-rose-500">₱ 0.00</h3>
+                        </div>
+                        <p class="text-xs font-bold text-slate-400 mt-2 flex items-center gap-1">
+                            <span id="stat-void-qty">0</span> items voided &bull; <span id="stat-cancelled">0</span>
+                            cancelled
+                        </p>
+                    </div>
+                    <i
+                        class="fa-solid fa-trash absolute -right-4 -bottom-4 text-6xl text-slate-100 group-hover:scale-110 transition-transform"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-6 mb-10 shrink-0">
+                <div
+                    class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group col-span-2 flex items-center justify-between">
+                    <div class="relative z-10 flex flex-col h-full justify-center gap-4">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Top Method
+                                (By Txns)</p>
+                            <h3 id="stat-top-payment-count" class="text-2xl font-black text-indigo-500">N/A</h3>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Top Method
+                                (By Sales)</p>
+                            <h3 id="stat-top-payment-sales" class="text-2xl font-black text-emerald-500">N/A</h3>
+                        </div>
+                    </div>
+                    <div class="relative z-10 flex flex-col gap-2 border-l border-slate-200 pl-6 w-1/2">
+                        <span class="text-xs font-bold text-slate-500 flex justify-between">CASH: <span
+                                id="stat-pm-cash" class="text-slate-800">₱0.00</span></span>
+                        <span class="text-xs font-bold text-slate-500 flex justify-between">QRPh: <span id="stat-pm-qr"
+                                class="text-slate-800">₱0.00</span></span>
+                        <span class="text-xs font-bold text-slate-500 flex justify-between">CARD: <span
+                                id="stat-pm-card" class="text-slate-800">₱0.00</span></span>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                    <div class="relative z-10 flex flex-col h-full justify-between">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Guests
+                                Today</p>
+                            <h3 id="stat-guests-today" class="text-3xl font-black text-slate-900">0</h3>
+                        </div>
+                        <p class="text-xs font-bold text-emerald-500 mt-2 flex items-center gap-1"><i
+                                class="fa-solid fa-users"></i> <span id="stat-active-guests">0</span> Active</p>
+                    </div>
+                    <i
+                        class="fa-solid fa-users-rays absolute -right-4 -bottom-4 text-6xl text-slate-100 group-hover:scale-110 transition-transform"></i>
+                </div>
+
+                <div
+                    class="glass-card p-6 rounded-[2rem] shadow-sm relative overflow-hidden group flex flex-col justify-between">
+                    <div class="relative z-10 flex justify-between">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Occupied</p>
+                            <h3 id="stat-occupied" class="text-2xl font-black text-slate-900">0</h3>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Txns</p>
+                            <h3 id="stat-txns" class="text-2xl font-black text-slate-900">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 shrink-0 h-[320px] mb-6">
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col">
+                    <h4 class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest">Daily Revenue Trend</h4>
+                    <div class="flex-1"><canvas id="revenueChart"></canvas></div>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col">
+                    <h4 class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest">Sales Per Hour</h4>
+                    <div class="flex-1"><canvas id="hourlyChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 shrink-0 h-[350px] mb-6">
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col">
+                    <h4 class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest">Kitchen vs Bar</h4>
+                    <div class="flex-1"><canvas id="typeChart"></canvas></div>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col col-span-2">
+                    <h4 class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest">Sales By Category</h4>
+                    <div class="flex-1"><canvas id="categoryChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 shrink-0 h-[350px] mb-10">
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col">
+                    <h4 class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest">Top Sellers (Units)</h4>
+                    <div class="flex-1"><canvas id="topItemsBarChart"></canvas></div>
+                </div>
+                <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col">
+                    <h4
+                        class="text-sm font-bold text-slate-800 mb-6 uppercase tracking-widest flex justify-between items-center">
+                        <span>Waiter Leaderboard</span>
+                        <i class="fa-solid fa-trophy text-amber-400 text-xl drop-shadow-md"></i>
+                    </h4>
+                    <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 sticky top-0">
+                                <tr
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th class="py-3 px-4 rounded-tl-xl">Rank</th>
+                                    <th class="py-3">Waiter Name</th>
+                                    <th class="py-3 text-center">Items</th>
+                                    <th class="py-3 text-right rounded-tr-xl pr-4">Sales (₱)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waiterTableBody"
+                                class="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <main id="historyTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">System Transactions</h2>
+                    <p class="text-slate-500 font-medium">Immutable record of all closed (paid) and voided tables.</p>
+                </div>
+
+                <div class="flex gap-4 items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 pl-2">Filter
+                            Date Range</label>
+                        <div id="historyDateRange"
+                            class="bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-800 outline-none hover:border-primary transition-all cursor-pointer flex justify-between items-center w-[300px]">
+                            <span><i class="fa-regular fa-calendar text-primary mr-2"></i> <span
+                                    class="date-text">Select Date</span></span>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="loadHistory()"
+                            class="px-5 py-2.5 bg-dark text-white rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 w-12 h-[42px]">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col relative">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                    <div class="flex bg-slate-200/50 p-1 rounded-xl">
+                        <button onclick="setHistoryFilter('all', this)"
+                            class="hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-white text-slate-800 shadow-sm transition-all">All</button>
+                        <button onclick="setHistoryFilter('paid', this)"
+                            class="hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Completed</button>
+                        <button onclick="setHistoryFilter('merged', this)"
+                            class="hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Merged</button>
+                        <button onclick="setHistoryFilter('cancelled', this)"
+                            class="hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">Cancelled</button>
+                    </div>
+
+                    <div class="relative w-72">
+                        <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="historySearchInput" onkeyup="applyHistoryFilters()"
+                            placeholder="Search Txn, Guest, or Table..."
+                            class="w-full bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all shadow-sm">
+                    </div>
+                </div>
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="p-4">Txn Code</th>
+                                <th class="p-4">Guest / Table</th>
+                                <th class="p-4">Total Paid</th>
+                                <th class="p-4">Discount</th>
+                                <th class="p-4">Method</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Timestamp</th>
+                                <th class="p-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable" class="divide-y divide-slate-100 text-sm font-medium text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="inventoryTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Inventory Control</h2>
+                    <p class="text-slate-500 font-medium">Manage pricing, categories, and stock limits.</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Filter
+                            Category</label>
+                        <select id="inventoryCategoryFilter" onchange="filterInventoryTable()"
+                            class="bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all shadow-sm w-48">
+                            <option value="ALL">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Search</label>
+                        <div class="relative w-64">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="inventorySearch" onkeyup="filterInventoryTable()"
+                                placeholder="Search menu..."
+                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all shadow-sm">
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button onclick="openCategoryManager()"
+                            class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group"></i> Categories
+                        </button>
+                        <button onclick="openMenuModal('add')"
+                            class="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add Menu
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="p-6">Menu Item</th>
+                                <th class="p-6">Category</th>
+                                <th class="p-6">Price</th>
+                                <th class="p-6">Stock Status</th>
+                                <th class="p-6 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTable" class="divide-y divide-slate-100 text-sm font-bold text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="staffTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Staff Management</h2>
+                    <p class="text-slate-500 font-medium">Control system access and employee records.</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Search
+                            Staff</label>
+                        <div class="relative w-64">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" onkeyup="filterSimpleTable('staffTable', this.value)"
+                                placeholder="Search Name or ID..."
+                                class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all shadow-sm">
+                        </div>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="openStaffModal('add')"
+                            class="px-6 py-3 bg-dark text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i> Add Staff
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="p-6 text-primary">Employee ID</th>
+                                <th class="p-6">Full Name</th>
+                                <th class="p-6">Position</th>
+                                <th class="p-6">Contact Number</th>
+                                <th class="p-6 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTable" class="divide-y divide-slate-100 text-sm font-bold text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="shiftTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Shift Management</h2>
+                    <p class="text-slate-500 font-medium">Control and audit cash drawer sessions.</p>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="promptOpenShift()"
+                        class="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-lock-open"></i> Start New Shift
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="p-6 text-primary">Shift ID</th>
+                                <th class="p-6">Cashier</th>
+                                <th class="p-6">Opening</th>
+                                <th class="p-6 text-emerald-500">Cash Sales</th>
+                                <th class="p-6 text-indigo-500">Non-Cash</th>
+                                <th class="p-6">Expected</th>
+                                <th class="p-6">Actual Count</th>
+                                <th class="p-6">Variance</th>
+                                <th class="p-6 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shiftTable" class="divide-y divide-slate-100 text-sm font-bold text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="voucherTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Voucher Management</h2>
+                    <p class="text-slate-500 font-medium">Generate, edit, and monitor discount vouchers.</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="relative w-64">
+                        <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" onkeyup="filterSimpleTable('voucherTableBody', this.value)"
+                            placeholder="Search voucher code..."
+                            class="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all shadow-sm">
+                    </div>
+                    <button onclick="openVoucherModal('add')"
+                        class="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Generate Voucher
+                    </button>
+                </div>
+            </div>
+            <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-100">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="p-6 text-primary">Voucher Code</th>
+                                <th class="p-6">Type</th>
+                                <th class="p-6">Value</th>
+                                <th class="p-6 text-center">Usage</th>
+                                <th class="p-6">Status</th>
+                                <th class="p-6 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="voucherTableBody" class="divide-y divide-slate-100 text-sm font-bold text-slate-600">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="settingsTab" class="tab-content h-full flex-col p-10 overflow-hidden w-full absolute inset-0">
+            <div class="flex justify-between items-end mb-8 shrink-0">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">System Settings</h2>
+                    <p class="text-slate-500 font-medium">Configure global application parameters.</p>
+                </div>
+            </div>
+
+            <div
+                class="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex-1 p-8 overflow-y-auto custom-scrollbar">
+                <div class="max-w-md">
+                    <h3 class="text-lg font-black text-slate-800 mb-4 border-b pb-2">Financial Settings</h3>
+                    <div class="mb-6">
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Service
+                            Charge Rate (%)</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="setting-sc-rate" placeholder="e.g. 10 for 10%"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                            <span class="text-slate-500 font-bold">%</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">Enter the percentage (e.g., 10 for 10%, 0 to disable).
+                        </p>
+                    </div>
+
+                    <button onclick="saveGlobalSettings()"
+                        class="w-full py-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+
+
+    <div id="receiptModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform modal-content border border-slate-200 flex flex-col max-h-[95vh]">
+
+            <div class="bg-slate-900 p-6 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center text-primary text-xl border border-primary/30">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-widest" id="viewTxnCode">TRX-XXXXXX</h2>
+                        <p class="text-xs font-medium text-slate-400 mt-1" id="viewTxnDate"></p>
+                    </div>
+                </div>
+                <button onclick="closeModal('receiptModal')"
+                    class="w-10 h-10 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-rose-500 transition-colors flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
+                <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-6 shadow-sm">
+                    <div class="grid grid-cols-3 gap-y-4 gap-x-6">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Guest Name</p>
+                            <p class="text-sm font-bold text-slate-800 mt-1" id="viewGuestName"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assigned Table
+                            </p>
+                            <p class="text-sm font-bold text-slate-800 mt-1" id="viewTableSummary"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status
+                            </p>
+                            <div class="mt-1"><span id="viewPaymentMethod"
+                                    class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-black uppercase tracking-widest">CASH</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Number
+                            </p>
+                            <p class="text-sm font-bold text-slate-700 mt-1" id="viewGuestContact">N/A</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</p>
+                            <p class="text-sm font-bold text-slate-700 mt-1 truncate" id="viewGuestEmail">N/A</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Guest Count</p>
+                            <p class="text-sm font-bold text-primary mt-1" id="viewGuestCount">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6 relative">
+                    <div
+                        class="absolute top-0 left-0 w-full h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxwb2x5Z29uIHBvaW50cz0iMCwwIDgsMCA0LDgiIGZpbGw9IiNmOGZhZmMiLz48L3N2Zz4=')]">
+                    </div>
+
+                    <div class="p-6 pt-8">
+                        <p
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-dashed border-slate-300">
+                            Order Breakdown</p>
+                        <table class="w-full text-left font-mono text-sm">
+                            <thead class="text-slate-400 text-xs">
+                                <tr>
+                                    <th class="pb-2 font-normal">QTY</th>
+                                    <th class="pb-2 font-normal">ITEM</th>
+                                    <th class="pb-2 font-normal text-center">STAT</th>
+                                    <th class="pb-2 font-normal text-right">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewReceiptItems" class="text-slate-700 divide-y divide-dashed divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-open text-primary"></i> System Generated Files
+                    </h3>
+                    <div id="fileLinksContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fileActionModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[600] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200 text-center">
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-blue-100">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-1">Receipt Options</h3>
+            <p id="popFileName"
+                class="text-xs font-bold text-slate-500 mb-6 truncate px-4 border bg-slate-50 rounded-lg py-2 mt-2">
+                FILENAME.TXT</p>
+
+            <div class="flex flex-col gap-3">
+                <a id="downloadPopBtn" href="#" download
+                    class="w-full py-3.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Download File
+                </a>
+                <button id="reprintPopBtn"
+                    class="w-full py-3.5 bg-dark text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Reprint Hardware
+                </button>
+                <button onclick="closeModal('fileActionModal')"
+                    class="w-full mt-2 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="menuModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="menuModalTitle" class="text-2xl font-black text-slate-900">Add Menu Item</h2>
+                <button onclick="closeModal('menuModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="menuForm" class="space-y-4">
+                <input type="hidden" id="menuId">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Item
+                        Name</label>
+                    <input type="text" id="menuName" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
+                        <select id="menuCategory"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</label>
+                        <select id="menuType"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                            <option value="solid">Solid (Kitchen)</option>
+                            <option value="drinkable">Drinkable (Bar)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit
+                            Price (₱)</label>
+                        <input type="number" id="menuPrice" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock
+                            Availability</label>
+                        <input type="number" id="menuStock" value="10" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </div>
+                </div>
+
+                <button type="button" onclick="confirmSave('menuModal')"
+                    class="w-full mt-4 py-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all">
+                    Review & Save
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="staffModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="staffModalTitle" class="text-2xl font-black text-slate-900">Add Staff</h2>
+                <button onclick="closeModal('staffModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="staffForm" class="space-y-4">
+                <input type="hidden" id="staffDbId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">First
+                            Name</label>
+                        <input type="text" id="staffFirstName" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Last
+                            Name</label>
+                        <input type="text" id="staffLastName" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Employee
+                            ID</label>
+                        <input type="text" id="staffId" placeholder="EMP1000" required
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Position</label>
+                        <select id="staffPosition"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                            <option value="cashier">Cashier</option>
+                            <option value="waiter">Waiter</option>
+                            <option value="manager">Manager</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact
+                        Number</label>
+                    <input type="text" id="staffContact" placeholder="09XX XXX XXXX"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">System
+                        Password</label>
+                    <input type="password" id="staffPassword" placeholder="Leave blank to keep existing password"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                </div>
+
+                <button type="button" onclick="confirmSave('staffModal')"
+                    class="w-full mt-4 py-4 bg-dark text-white rounded-xl font-bold shadow-lg shadow-slate-900/30 hover:bg-slate-800 transition-all">
+                    Review & Save
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="openShiftModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-900">Start Shift</h2>
+                <button onclick="closeModal('openShiftModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assign
+                        Cashier</label>
+                    <select id="shiftEmployeeId"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Opening
+                        Cash Balance (₱)</label>
+                    <input type="number" id="shiftOpeningAmount" value="0"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                </div>
+
+                <button type="button" onclick="executeOpenShift()"
+                    class="w-full mt-4 py-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check"></i> Open Drawer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="closeShiftModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-900">End Shift Summary</h2>
+                <button onclick="closeModal('closeShiftModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <input type="hidden" id="closeShiftId">
+
+                <div
+                    class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-600 space-y-2">
+                    <div class="flex justify-between"><span>Opening Pondo:</span><span id="shiftSumOpen"
+                            class="font-bold">₱0.00</span></div>
+                    <div class="flex justify-between text-emerald-600"><span>Cash Sales:</span><span id="shiftSumCash"
+                            class="font-bold">+ ₱0.00</span></div>
+                    <div class="flex justify-between text-indigo-50 border-b border-slate-200 pb-2 mb-2"><span>Non-Cash
+                            (QR/Card):</span><span id="shiftSumNonCash" class="font-bold">₱0.00</span></div>
+
+                    <div class="flex justify-between font-black text-lg text-slate-800 pt-1">
+                        <span>Expected Cash sa Drawer:</span><span id="shiftSumExpected">₱0.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Actual
+                        Cash Counted (₱)</label>
+                    <input type="number" id="shiftClosingAmount" placeholder="Enter actual cash in drawer"
+                        class="w-full bg-white border-2 border-slate-200 rounded-xl py-3 px-4 text-lg font-black text-slate-800 outline-none focus:border-rose-400 transition-all shadow-inner">
+                </div>
+
+                <button type="button" onclick="executeCloseShift()"
+                    class="w-full mt-2 py-4 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock"></i> Submit & Close Shift
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[600] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-xs rounded-[2.5rem] shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-blue-100">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-2">Confirm Action</h3>
+            <p class="text-sm font-medium text-slate-500 mb-8">Are you sure you want to save these changes to the
+                system?</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('confirmModal')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">Cancel</button>
+                <button onclick="executeSave()"
+                    class="flex-1 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all">Yes,
+                    Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteVoucherModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[600] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-xs rounded-[2.5rem] shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div
+                class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-rose-100">
+                <i class="fa-solid fa-trash"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-2">Delete Voucher</h3>
+            <p class="text-sm font-medium text-slate-500 mb-8">Are you sure you want to delete this voucher? This cannot
+                be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('deleteVoucherModal')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">Cancel</button>
+                <button onclick="executeDeleteVoucher()"
+                    class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notificationModal"
+        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1000] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-xs rounded-3xl shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div id="notifIcon"
+                class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2"></div>
+            <h3 id="notifTitle" class="text-xl font-black text-slate-900 mb-1"></h3>
+            <p id="notifMessage" class="text-sm font-medium text-slate-500 mb-6"></p>
+            <button onclick="closeModal('notificationModal')"
+                class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all">Acknowledge</button>
+        </div>
+    </div>
+
+    <div id="logoutModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-10 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div
+                class="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl border-4 border-rose-100">
+                <i class="fa-solid fa-power-off"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 mb-2">End Session?</h2>
+            <p class="text-slate-500 font-medium mb-8">Are you sure you want to sign out of the manager dashboard?</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('logoutModal')"
+                    class="flex-1 py-4 bg-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all">Cancel</button>
+                <button onclick="window.location.href='/logout'"
+                    class="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-bold shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="voucherModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="vModalTitle" class="text-2xl font-black text-slate-900">New Voucher</h2>
+                <button onclick="closeModal('voucherModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="vId">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Voucher
+                        Code</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="vCode" placeholder="e.g. SUMMER20"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary uppercase">
+                        <button type="button" id="vRandomBtn"
+                            onclick="document.getElementById('vCode').value = Math.random().toString(36).substring(2, 8).toUpperCase()"
+                            class="bg-slate-800 text-white px-4 rounded-xl text-xs font-bold hover:bg-slate-700">Random</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Discount
+                            Type</label>
+                        <select id="vType"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed (₱)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Value</label>
+                        <input type="number" id="vValue" placeholder="0"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Max
+                            Uses</label>
+                        <input type="number" id="vMaxUses" value="1" min="1"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</label>
+                        <select id="vStatus"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="used">Used</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" onclick="saveVoucher()"
+                    class="w-full mt-4 py-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-[#1e40af] transition-all">Save
+                    Voucher</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="categoryManagerModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 transform scale-95 transition-transform modal-content border border-slate-200 flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <h2 class="text-2xl font-black text-slate-900">Manage Categories</h2>
+                <button onclick="closeModal('categoryManagerModal')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="flex gap-2 mb-6 shrink-0">
+                <input type="hidden" id="manageCatOldName" value="">
+                <input type="text" id="manageCatInput" placeholder="New Category Name..."
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 outline-none focus:border-primary transition-all">
+                <button onclick="saveCategory()" id="saveCatBtn"
+                    class="px-5 bg-primary text-white rounded-xl font-bold hover:bg-[#1e40af] transition-all whitespace-nowrap">Add</button>
+                <button onclick="cancelEditCategory()" id="cancelCatBtn"
+                    class="hidden px-4 bg-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-300 transition-all"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="overflow-y-auto custom-scrollbar flex-1 border border-slate-100 rounded-xl p-2 bg-slate-50/50">
+                <table class="w-full text-left text-sm">
+                    <tbody id="categoryManagerTableBody" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteMenuModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[600] hidden items-center justify-center p-4 transition-all opacity-0">
+        <div
+            class="bg-white w-full max-w-xs rounded-[2.5rem] shadow-2xl p-8 text-center transform scale-95 transition-transform modal-content border border-slate-200">
+            <div
+                class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 border-rose-100">
+                <i class="fa-solid fa-trash"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-2">Delete Menu Item</h3>
+            <p class="text-sm font-medium text-slate-500 mb-8">Are you sure you want to delete this item? This action
+                cannot be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('deleteMenuModal')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">Cancel</button>
+                <button onclick="executeDeleteMenu()"
+                    class="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let revenueChart, hourlyChart, typeChart, categoryChart, topItemsBarChart;
+        let pendingSaveType = '';
+        let dashboardDataCache = null;
+        let pendingDeleteVoucherId = null;
+
+        // Date Globals
+        let dashStartDate = moment().format('YYYY-MM-DD');
+        let dashEndDate = moment().format('YYYY-MM-DD');
+        let histStartDate = '';
+        let histEndDate = '';
+
+        // Vat Toggle Engine
+        let globalRevenueRaw = 0;
+        let isVatInclusive = true;
+
+        loadCategoriesList();
+
+        $(function () {
+            // Initialize Dashboard Daterange Picker
+            function cbDash(start, end) {
+                $('#dashboardDateRange .date-text').html(start.format('MMM D, YYYY') + ' - ' + end.format('MMM D, YYYY'));
+                dashStartDate = start.format('YYYY-MM-DD');
+                dashEndDate = end.format('YYYY-MM-DD');
+                refreshDashboard(); // Auto refresh when date changes
+            }
+
+            $('#dashboardDateRange').daterangepicker({
+                startDate: moment(),
+                endDate: moment(),
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                }
+            }, cbDash);
+
+            $('#dashboardDateRange .date-text').html(moment().format('MMM D, YYYY') + ' - ' + moment().format('MMM D, YYYY'));
+
+            // Initialize History Daterange Picker
+            function cbHist(start, end) {
+                $('#historyDateRange .date-text').html(start.format('MMM D, YYYY') + ' - ' + end.format('MMM D, YYYY'));
+                histStartDate = start.format('YYYY-MM-DD');
+                histEndDate = end.format('YYYY-MM-DD');
+                loadHistory(); // Auto filter when date changes
+            }
+
+            $('#historyDateRange').daterangepicker({
+                startDate: moment(),
+                endDate: moment(),
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                }
+            }, cbHist);
+
+            $('#historyDateRange .date-text').html(moment().format('MMM D, YYYY') + ' - ' + moment().format('MMM D, YYYY'));
+
+            // Set initial dates for history
+            histStartDate = moment().format('YYYY-MM-DD');
+            histEndDate = moment().format('YYYY-MM-DD');
+
+            // Load initial view
+            switchTab('dashboardTab');
+        });
+
+        async function loadVouchers() {
+            try {
+                const res = await fetch('/api/manager/vouchers');
+                const data = await res.json();
+                document.getElementById('voucherTableBody').innerHTML = data.map(v => {
+                    let statusColor = v.status === 'active' ? 'bg-emerald-50 text-emerald-600' : (v.status === 'used' ? 'bg-slate-100 text-slate-500' : 'bg-rose-50 text-rose-600');
+                    return `
+                <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors">
+                    <td class="p-6 text-primary font-black uppercase">${v.voucher_code}</td>
+                    <td class="p-6 uppercase text-xs font-bold">${v.discount_type}</td>
+                    <td class="p-6 font-black">${v.discount_type === 'percentage' ? v.discount_value + '%' : '₱' + v.discount_value}</td>
+                    <td class="p-6 text-center font-bold text-slate-500">${v.current_uses} / ${v.max_uses}</td>
+                    <td class="p-6"><span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusColor}">${v.status}</span></td>
+                    <td class="p-6 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button onclick="openVoucherModal('edit', '${v.id}', '${v.voucher_code}', '${v.discount_type}', '${v.discount_value}', '${v.max_uses}', '${v.status}')" class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 hover:bg-dark hover:text-white transition-all shadow-sm"><i class="fa-solid fa-pencil"></i></button>
+                            <button onclick="confirmDeleteVoucher(${v.id})" class="w-9 h-9 rounded-xl bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white transition-all shadow-sm"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                }).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        function openVoucherModal(mode, id = '', code = '', type = 'percentage', value = '', max_uses = '1', status = 'active') {
+            document.getElementById('vModalTitle').innerText = mode === 'add' ? 'New Voucher' : 'Edit Voucher';
+            document.getElementById('vId').value = id;
+            document.getElementById('vCode').value = code;
+            document.getElementById('vCode').disabled = mode === 'edit'; // Don't allow changing code if editing
+            document.getElementById('vRandomBtn').style.display = mode === 'edit' ? 'none' : 'block';
+
+            document.getElementById('vType').value = type;
+            document.getElementById('vValue').value = value;
+            document.getElementById('vMaxUses').value = max_uses;
+            document.getElementById('vStatus').value = status;
+
+            openModal('voucherModal');
+        }
+
+        async function saveVoucher() {
+            const id = document.getElementById('vId').value;
+            const code = document.getElementById('vCode').value;
+            const type = document.getElementById('vType').value;
+            const value = document.getElementById('vValue').value;
+            const max_uses = document.getElementById('vMaxUses').value;
+            const status = document.getElementById('vStatus').value;
+
+            if (!code || !value) return showNotification('Error', 'Please fill all fields', false);
+
+            try {
+                const res = await fetch('/api/manager/vouchers/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, code, type, value, max_uses, status })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeModal('voucherModal');
+                    showNotification('Success', data.message, true);
+                    loadVouchers();
+                } else {
+                    showNotification('Error', data.message, false);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function confirmDeleteVoucher(v_id) {
+            pendingDeleteVoucherId = v_id;
+            openModal('deleteVoucherModal');
+        }
+
+        async function executeDeleteVoucher() {
+            closeModal('deleteVoucherModal');
+            if (!pendingDeleteVoucherId) return;
+
+            try {
+                const res = await fetch(`/api/manager/vouchers/delete/${pendingDeleteVoucherId}`, { method: 'DELETE' });
+                const data = await res.json();
+                setTimeout(() => {
+                    if (data.success) {
+                        showNotification('Deleted', data.message, true);
+                        loadVouchers();
+                    } else {
+                        showNotification('Error', data.message, false);
+                    }
+                }, 300);
+            } catch (err) {
+                setTimeout(() => showNotification('Error', 'Failed to delete voucher.', false), 300);
+            }
+        }
+
+
+        function toggleVat(inclusive) {
+            isVatInclusive = inclusive;
+            document.getElementById('btnVatInc').className = inclusive ? 'px-2 py-1 bg-white shadow-sm rounded text-[8px] font-black uppercase text-primary transition-all' : 'px-2 py-1 text-slate-400 rounded text-[8px] font-black uppercase hover:text-slate-600 transition-all';
+            document.getElementById('btnVatExc').className = !inclusive ? 'px-2 py-1 bg-white shadow-sm rounded text-[8px] font-black uppercase text-primary transition-all' : 'px-2 py-1 text-slate-400 rounded text-[8px] font-black uppercase hover:text-slate-600 transition-all';
+
+            const displayAmt = inclusive ? globalRevenueRaw : (globalRevenueRaw / 1.12);
+            document.getElementById('stat-revenue').innerText = `₱ ${displayAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Toggle Net Sales
+            if (dashboardDataCache) {
+                const netSales = inclusive ? dashboardDataCache.stats.net_sales : (dashboardDataCache.stats.net_sales / 1.12);
+                document.getElementById('stat-net-sales').innerText = `₱ ${netSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        }
+
+        // --- SIMPLE SEARCH FILTER ---
+        function filterSimpleTable(tableId, query) {
+            const q = query.toLowerCase();
+            const rows = document.querySelectorAll(`#${tableId} tr`);
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(q) ? '' : 'none';
+            });
+        }
+        // --- HISTORY FILTER (SEARCH + TABS) ---
+        let currentHistoryFilter = 'all';
+
+        function setHistoryFilter(status, btnElement) {
+            currentHistoryFilter = status;
+
+            // I-reset ang kulay ng lahat ng tabs
+            document.querySelectorAll('.hist-tab-btn').forEach(btn => {
+                btn.className = "hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 transition-all";
+            });
+            // I-highlight ang pinindot na tab
+            btnElement.className = "hist-tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-white text-slate-800 shadow-sm transition-all";
+
+            // I-apply ang filter
+            applyHistoryFilters();
+        }
+
+        function applyHistoryFilters() {
+            const query = (document.getElementById('historySearchInput').value || '').toLowerCase();
+
+            const rows = document.querySelectorAll('#historyTable tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const status = row.getAttribute('data-status');
+
+                const matchesSearch = text.includes(query);
+                const matchesStatus = (currentHistoryFilter === 'all') || (status === currentHistoryFilter);
+
+                // Ipakita lang ang row kung parehas pumasang sa Search Bar AT sa Tab
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
+
+        // --- INVENTORY FILTER (SEARCH + CATEGORY) ---
+        function filterInventoryTable() {
+            const query = document.getElementById('inventorySearch').value.toLowerCase();
+            const selectedCat = document.getElementById('inventoryCategoryFilter').value;
+            const rows = document.querySelectorAll('#inventoryTable tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const itemCat = row.cells[1].innerText;
+
+                const matchesSearch = text.includes(query);
+                const matchesCat = (selectedCat === 'ALL' || itemCat === selectedCat);
+
+                row.style.display = (matchesSearch && matchesCat) ? '' : 'none';
+            });
+        }
+
+        // --- FETCH DATA ---
+        async function refreshDashboard(btnElement = null) {
+            if (btnElement) {
+                const icon = btnElement.querySelector('i');
+                if (icon) {
+                    icon.classList.add('animate-spin');
+                    setTimeout(() => icon.classList.remove('animate-spin'), 600);
+                }
+            }
+            try {
+                let url = '/api/manager/dashboard_stats';
+                const params = [];
+                if (dashStartDate) params.push(`from_date=${dashStartDate}`);
+                if (dashEndDate) params.push(`to_date=${dashEndDate}`);
+                if (params.length > 0) url += `?${params.join('&')}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success === false) return;
+
+                // SAVE TO CACHE FOR EXCEL EXPORT
+                dashboardDataCache = data;
+
+                globalRevenueRaw = data.stats.revenue;
+                toggleVat(isVatInclusive);
+
+                document.getElementById('stat-discounts').innerText = `₱ ${data.stats.total_discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('stat-voids').innerText = `₱ ${data.stats.void_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('stat-void-qty').innerText = data.stats.void_qty;
+                document.getElementById('stat-cancelled').innerText = data.stats.cancelled_count;
+
+                document.getElementById('stat-top-payment-count').innerText = data.stats.top_payment_method_count;
+                document.getElementById('stat-top-payment-sales').innerText = data.stats.top_payment_method_sales;
+                document.getElementById('stat-pm-cash').innerText = `₱${(data.stats.payment_breakdown.cash || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('stat-pm-qr').innerText = `₱${(data.stats.payment_breakdown.qrph || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('stat-pm-card').innerText = `₱${(data.stats.payment_breakdown.card || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                document.getElementById('stat-guests-today').innerText = data.stats.total_guests_today;
+                document.getElementById('stat-active-guests').innerText = data.stats.active_guests;
+
+                document.getElementById('stat-occupied').innerText = `${data.stats.occupied}`;
+                document.getElementById('stat-txns').innerText = data.stats.transactions;
+
+                const wtBody = document.getElementById('waiterTableBody');
+                wtBody.innerHTML = data.charts.top_waiters.map((w, idx) => `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors">
+                        <td class="py-3 px-4"><div class="w-6 h-6 rounded bg-amber-100 text-amber-600 font-black text-xs flex items-center justify-center">${idx + 1}</div></td>
+                        <td class="py-3 text-slate-800">${w.waiter_name}</td>
+                        <td class="py-3 text-center text-slate-500 font-bold">${w.items_served}</td>
+                        <td class="py-3 text-right pr-4 text-emerald-600 font-black">₱${parseFloat(w.total_sales).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `).join('');
+
+                initCharts(data.charts);
+            } catch (err) { console.error("Stats Error:", err); }
+        }
+
+        async function loadHistory() {
+            try {
+                let url = '/api/manager/transactions_history';
+                const params = [];
+                if (histStartDate) params.push(`from_date=${histStartDate}`);
+                if (histEndDate) params.push(`to_date=${histEndDate}`);
+                if (params.length > 0) url += `?${params.join('&')}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                const table = document.getElementById('historyTable');
+
+                table.innerHTML = data.map(txn => {
+                    const isVoid = txn.status === 'cancelled';
+                    const isMerged = txn.status === 'merged';
+
+                    let badgeClass = 'bg-emerald-100 text-emerald-600';
+                    if (isVoid) badgeClass = 'bg-rose-100 text-rose-600';
+                    else if (isMerged) badgeClass = 'bg-blue-100 text-blue-600';
+
+                    const amt = parseFloat(txn.total_paid || 0).toFixed(2);
+                    const disc = parseFloat(txn.discount || 0).toFixed(2);
+
+                    return `
+                    <tr data-status="${txn.status}" class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
+                        <td class="p-4 text-primary font-black tracking-widest text-xs">${txn.transaction_code}</td>
+                        <td class="p-4">
+                            <p class="text-slate-800 font-bold">${txn.guest_name}</p>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest">${txn.table_summary || 'No Table'}</p>
+                        </td>
+                        <td class="p-4 font-black ${isVoid || isMerged ? 'text-slate-400 line-through decoration-2' : 'text-slate-900'} text-base">₱ ${amt}</td>
+                        <td class="p-4 font-black text-rose-500 text-sm">-₱ ${disc}</td>
+                        <td class="p-4 text-xs font-bold text-slate-500 uppercase">${txn.clean_payment_method}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 rounded uppercase tracking-wider text-[10px] font-black ${badgeClass}">${txn.status}</span>
+                        </td>
+                        <td class="p-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(txn.created_at).toLocaleString()}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="viewReceipt('${txn.transaction_code}')" class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-dark hover:text-white transition-all shadow-sm">Files</button>
+                        </td>
+                    </tr>
+                `}).join('');
+                applyHistoryFilters();
+            } catch (err) { console.error("History Error:", err); }
+        }
+
+        async function loadInventory() {
+            try {
+                const res = await fetch('/api/manager/inventory');
+                const data = await res.json();
+                const table = document.getElementById('inventoryTable');
+                table.innerHTML = data.map(item => `
+                    <tr class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
+                        <td class="p-6 text-slate-800 font-bold">${item.menu_name}</td>
+                        <td class="p-6 font-medium text-slate-400">${item.category}</td>
+                        <td class="p-6 text-emerald-600 font-black">₱ ${parseFloat(item.unit_price).toFixed(2)}</td>
+                        <td class="p-6">
+                            <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${item.availability > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
+                                ${item.availability} Available
+                            </span>
+                        </td>
+                        <td class="p-6 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="openMenuModal('edit', '${item.menu_id}', '${item.menu_name.replace(/'/g, "\\'")}', '${item.category}', '${item.unit_price}', '${item.availability}', '${item.type}')" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 hover:bg-primary hover:text-white transition-all shadow-sm"><i class="fa-solid fa-pencil"></i></button>
+                                <button onclick="confirmDeleteMenu(${item.menu_id})" class="w-10 h-10 rounded-xl bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white transition-all shadow-sm"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                const categories = [...new Set(data.map(item => item.category))];
+                const catFilter = document.getElementById('inventoryCategoryFilter');
+                catFilter.innerHTML = '<option value="ALL">All Categories</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            } catch (err) { console.error("Inventory Error:", err); }
+        }
+
+        async function loadStaff() {
+            try {
+                const res = await fetch('/api/manager/employees');
+                const data = await res.json();
+                const table = document.getElementById('staffTable');
+                table.innerHTML = data.map(emp => `
+                    <tr class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
+                        <td class="p-6 text-primary font-black">#${emp.employee_id}</td>
+                        <td class="p-6 text-slate-800 font-bold">${emp.firstName} ${emp.lastName}</td>
+                        <td class="p-6">
+                            <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">${emp.position}</span>
+                        </td>
+                        <td class="p-6 font-medium text-slate-400">${emp.contact_number || 'N/A'}</td>
+                        <td class="p-6 text-center">
+                            <button onclick="openStaffModal('edit', '${emp.id}', '${emp.employee_id}', '${emp.firstName}', '${emp.lastName}', '${emp.position}', '${emp.contact_number}')" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 hover:bg-dark hover:text-white transition-all shadow-sm"><i class="fa-solid fa-pencil"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) { console.error("Staff Error:", err); }
+        }
+
+        // --- RECEIPT VIEW & POP-UP ACTIONS ---
+        async function viewReceipt(txn_code) {
+            try {
+                const res = await fetch(`/api/manager/transaction_files/${txn_code}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    const t = data.transaction;
+                    document.getElementById('viewTxnCode').innerText = t.transaction_code;
+                    document.getElementById('viewTxnDate').innerText = new Date(t.created_at).toLocaleString();
+                    document.getElementById('viewGuestName').innerText = t.guest_name;
+                    document.getElementById('viewTableSummary').innerText = t.table_summary || "No Table";
+
+                    document.getElementById('viewGuestContact').innerText = t.contact_number || "N/A";
+                    document.getElementById('viewGuestEmail').innerText = t.guest_email || "N/A";
+                    document.getElementById('viewGuestCount').innerText = t.guest_count || "0";
+
+                    const paymentMethodBadge = document.getElementById('viewPaymentMethod');
+                    if (data.items.length > 0 && data.items[0].unit_price === 0) {
+                        paymentMethodBadge.innerText = "FREE";
+                        paymentMethodBadge.className = "px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-black uppercase tracking-widest";
+                    } else if (t.status === 'cancelled') {
+                        paymentMethodBadge.innerText = "CANCELLED";
+                        paymentMethodBadge.className = "px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-black uppercase tracking-widest";
+                    } else if (t.status === 'merged') {
+                        paymentMethodBadge.innerText = "MERGED";
+                        paymentMethodBadge.className = "px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-black uppercase tracking-widest";
+                    } else {
+                        const method = t.status ? t.status.toUpperCase() : "Paid";
+
+                        paymentMethodBadge.innerText = method;
+                        if (method.includes('QRPH')) {
+                            paymentMethodBadge.className = "px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-black uppercase tracking-widest";
+                        } else if (method.includes('CARD')) {
+                            paymentMethodBadge.className = "px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-black uppercase tracking-widest";
+                        } else {
+                            paymentMethodBadge.className = "px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-black uppercase tracking-widest";
+                        }
+                    }
+
+                    const tbody = document.getElementById('viewReceiptItems');
+                    tbody.innerHTML = data.items.map(item => {
+                        const isVoid = item.status === 'void';
+                        return `
+                        <tr>
+                            <td class="py-2 text-slate-500">${item.quantity}x</td>
+                            <td class="py-2 ${isVoid ? 'line-through text-slate-400' : 'text-slate-800'}">${item.menu_name}</td>
+                            <td class="py-2 text-center text-[10px] uppercase font-bold tracking-widest ${isVoid ? 'text-rose-500' : 'text-emerald-500'}">${item.status}</td>
+                            <td class="py-2 text-right ${isVoid ? 'text-slate-400 line-through' : 'text-slate-900'}">₱${parseFloat(item.total_price).toFixed(2)}</td>
+                        </tr>
+                        `
+                    }).join('');
+
+                    const filesContainer = document.getElementById('fileLinksContainer');
+
+                    if (data.files && data.files.length > 0) {
+                        filesContainer.innerHTML = data.files.map(f => `
+                            <div onclick="openFileActionPopup('${f.folder}', '${f.filename}')" class="cursor-pointer flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-primary hover:shadow-md group">
+                                <div class="flex gap-3 items-center">
+                                    <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex justify-center items-center text-slate-400 group-hover:text-primary transition-colors">
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-black text-slate-800 group-hover:text-primary transition-colors truncate max-w-[160px] sm:max-w-[200px]">${f.filename}</span>
+                                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">${f.type}</span>
+                                    </div>
+                                </div>
+                                <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        filesContainer.innerHTML = `<div class="col-span-1 sm:col-span-2 bg-slate-50 p-6 rounded-xl border border-dashed border-slate-200 text-center"><i class="fa-solid fa-folder-open text-slate-300 text-2xl mb-2"></i><p class="text-sm font-bold text-slate-400">No receipt files generated for this transaction.</p></div>`;
+                    }
+
+                    openModal('receiptModal');
+                } else {
+                    showNotification('Error', 'Could not load transaction details.', false);
+                }
+            } catch (err) {
+                console.error(err);
+                showNotification('Network Error', 'Failed to fetch transaction.', false);
+            }
+        }
+
+        function openFileActionPopup(folder, filename) {
+            document.getElementById('popFileName').innerText = filename;
+
+            const downloadBtn = document.getElementById('downloadPopBtn');
+            downloadBtn.href = `/download_receipt/${folder}/${filename}`;
+
+            const reprintBtn = document.getElementById('reprintPopBtn');
+            reprintBtn.onclick = () => reprintSelectedFileFromPop(folder, filename, reprintBtn);
+
+            openModal('fileActionModal');
+        }
+
+        async function reprintSelectedFileFromPop(folder, filename, btnElement) {
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Processing...`;
+            btnElement.disabled = true;
+
+            try {
+                const res = await fetch(`/api/manager/reprint_file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder: folder, filename: filename })
+                });
+                const data = await res.json();
+
+                closeModal('fileActionModal');
+                setTimeout(() => {
+                    if (data.success) {
+                        showNotification('Reprint Success!', data.message, true);
+                    } else {
+                        showNotification('Printer Notice', data.message, false);
+                    }
+                }, 350);
+            } catch (err) {
+                console.error(err);
+                showNotification('Network Error', 'Failed to send command to server.', false);
+            } finally {
+                btnElement.innerHTML = originalHTML;
+                btnElement.disabled = false;
+            }
+        }
+
+        // --- CONFIRMATION & SAVE ---
+        function confirmSave(type) {
+            if (type === 'menuModal' && !document.getElementById('menuName').value) return showNotification('Error', 'Item name is required.', false);
+            if (type === 'staffModal' && (!document.getElementById('staffId').value || !document.getElementById('staffFirstName').value)) return showNotification('Error', 'ID and First Name are required.', false);
+
+            pendingSaveType = type;
+            openModal('confirmModal');
+        }
+
+        function executeSave() {
+            closeModal('confirmModal');
+            setTimeout(() => { saveItem(pendingSaveType); }, 300);
+        }
+
+        async function saveItem(modalType) {
+            let endpoint = '';
+            let payload = {};
+
+            if (modalType === 'menuModal') {
+                endpoint = '/api/manager/menu/save';
+                payload = {
+                    id: document.getElementById('menuId').value || null,
+                    name: document.getElementById('menuName').value,
+                    category: document.getElementById('menuCategory').value,
+                    type: document.getElementById('menuType').value,
+                    price: parseFloat(document.getElementById('menuPrice').value),
+                    stock: parseInt(document.getElementById('menuStock').value)
+                };
+            } else if (modalType === 'staffModal') {
+                endpoint = '/api/manager/staff/save';
+                payload = {
+                    id: document.getElementById('staffDbId').value || null,
+                    emp_id: document.getElementById('staffId').value,
+                    fname: document.getElementById('staffFirstName').value,
+                    lname: document.getElementById('staffLastName').value,
+                    position: document.getElementById('staffPosition').value,
+                    contact: document.getElementById('staffContact').value,
+                    password: document.getElementById('staffPassword').value
+                };
+            }
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeModal(modalType);
+                    setTimeout(() => {
+                        showNotification('Success!', modalType === 'menuModal' ? 'Menu item saved securely.' : 'Staff record updated.', true);
+                        if (modalType === 'menuModal') loadInventory();
+                        if (modalType === 'staffModal') loadStaff();
+                    }, 350);
+                } else {
+                    showNotification('Database Error', data.message, false);
+                }
+            } catch (err) {
+                console.error(err);
+                showNotification('Network Error', 'Could not reach the server.', false);
+            }
+        }
+
+        // --- CHARTS ---
+        function initCharts(chartData) {
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            // Revenue Trend (Line)
+            const revCtx = document.getElementById('revenueChart').getContext('2d');
+            if (revenueChart) revenueChart.destroy();
+            revenueChart = new Chart(revCtx, {
+                type: 'line',
+                data: {
+                    labels: chartData.trend.map(d => new Date(d.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Gross Sales',
+                        data: chartData.trend.map(d => d.total),
+                        borderColor: '#1d4ed8',
+                        backgroundColor: 'rgba(29, 78, 216, 0.05)',
+                        fill: true, tension: 0.4, borderWidth: 4, pointRadius: 0, pointHoverRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Hourly Sales (Bar)
+            const hourCtx = document.getElementById('hourlyChart').getContext('2d');
+            if (hourlyChart) hourlyChart.destroy();
+
+            // Format hour (e.g. 14 -> 2:00 PM)
+            const formattedHours = chartData.hourly_sales.map(d => {
+                const h = parseInt(d.hour);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hr12 = h % 12 || 12;
+                return `${hr12}:00 ${ampm}`;
+            });
+
+            hourlyChart = new Chart(hourCtx, {
+                type: 'bar',
+                data: {
+                    labels: formattedHours,
+                    datasets: [{
+                        label: 'Sales (₱)',
+                        data: chartData.hourly_sales.map(d => d.sales),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+
+            // Type Performance (Doughnut)
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            if (typeChart) typeChart.destroy();
+            typeChart = new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.type_performance.map(i => i.type.toLowerCase() === 'solid' ? 'KITCHEN' : 'BAR'),
+                    datasets: [{
+                        data: chartData.type_performance.map(i => i.sales),
+                        backgroundColor: ['#1d4ed8', '#0f172a'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    cutout: '75%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { weight: 'bold' } } },
+                        tooltip: { callbacks: { label: function (context) { return ' ₱ ' + parseFloat(context.raw).toLocaleString(undefined, { minimumFractionDigits: 2 }); } } }
+                    }
+                }
+            });
+
+            // Category Performance (Bar)
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChart) categoryChart.destroy();
+            categoryChart = new Chart(catCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.category_sales.map(i => i.category),
+                    datasets: [{
+                        label: 'Sales (₱)',
+                        data: chartData.category_sales.map(i => i.sales),
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+
+            // Top Sellers (Bar)
+            const topBarCtx = document.getElementById('topItemsBarChart').getContext('2d');
+            if (topItemsBarChart) topItemsBarChart.destroy();
+            topItemsBarChart = new Chart(topBarCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.top_items.map(i => i.menu_name),
+                    datasets: [{
+                        label: 'Units Sold',
+                        data: chartData.top_items.map(i => i.total_sold),
+                        backgroundColor: '#1d4ed8',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            if (tabId === 'dashboardTab') refreshDashboard();
+            if (tabId === 'historyTab') loadHistory();
+            if (tabId === 'inventoryTab') loadInventory();
+            if (tabId === 'staffTab') loadStaff();
+            if (tabId === 'shiftTab') loadShifts();
+            if (tabId === 'voucherTab') loadVouchers();
+            if (tabId === 'settingsTab') loadSettingsTab(); // Load settings tab when clicked
+        }
+
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => { m.classList.replace('opacity-0', 'opacity-100'); m.querySelector('.modal-content').classList.remove('scale-95'); }, 10);
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.replace('opacity-100', 'opacity-0');
+            m.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
+        }
+
+        function showNotification(title, message, isSuccess = true) {
+            document.getElementById('notifTitle').innerText = title;
+            document.getElementById('notifMessage').innerText = message;
+
+            const iconDiv = document.getElementById('notifIcon');
+            iconDiv.className = `w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl border-2 ${isSuccess ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-rose-50 text-rose-500 border-rose-100'}`;
+            iconDiv.innerHTML = isSuccess ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+
+            openModal('notificationModal');
+        }
+
+        function openMenuModal(mode, id = '', name = '', category = 'OCEAN FRESH', price = '', stock = '10', type = 'solid') {
+            document.getElementById('menuModalTitle').innerText = mode === 'add' ? 'Add Menu Item' : 'Edit Menu Item';
+            document.getElementById('menuId').value = id;
+            document.getElementById('menuName').value = name;
+            document.getElementById('menuCategory').value = category;
+            document.getElementById('menuPrice').value = price;
+            document.getElementById('menuStock').value = stock;
+            document.getElementById('menuType').value = type;
+            openModal('menuModal');
+        }
+
+        function openStaffModal(mode, dbId = '', empId = '', fName = '', lName = '', pos = 'cashier', contact = '') {
+            document.getElementById('staffModalTitle').innerText = mode === 'add' ? 'Add New Staff' : 'Edit Staff Record';
+            document.getElementById('staffDbId').value = dbId;
+            document.getElementById('staffId').value = empId;
+            document.getElementById('staffFirstName').value = fName;
+            document.getElementById('staffLastName').value = lName;
+            document.getElementById('staffPosition').value = pos;
+            document.getElementById('staffContact').value = contact;
+            document.getElementById('staffPassword').value = '';
+            openModal('staffModal');
+        }
+
+        async function exportDashboardToExcel(btnElement) {
+            if (!dashboardDataCache) {
+                showNotification('Export Error', 'Dashboard data is still loading. Please wait a moment.', false);
+                return;
+            }
+
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Exporting...`;
+            btnElement.disabled = true;
+
+            try {
+                // 1. Fetch Transactions History
+                let txUrl = '/api/manager/transactions_history';
+                const params = [];
+                if (dashStartDate) params.push(`from_date=${dashStartDate}`);
+                if (dashEndDate) params.push(`to_date=${dashEndDate}`);
+                if (params.length > 0) txUrl += `?${params.join('&')}`;
+
+                const txRes = await fetch(txUrl);
+                const historyData = await txRes.json();
+
+                // 2. Fetch Shift Management Data
+                const shiftRes = await fetch('/api/manager/shifts');
+                const shiftData = await shiftRes.json();
+
+                const data = dashboardDataCache;
+                const wb = XLSX.utils.book_new();
+
+                const grossRevenue = data.stats.revenue;
+                const netRevenue = data.stats.net_sales;
+                const vatAmount = grossRevenue - netRevenue;
+
+                // Base Styles
+                const headerStyle = {
+                    font: { bold: true, color: { rgb: "FFFFFF" }, name: "Arial", sz: 11 },
+                    fill: { fgColor: { rgb: "1D4ED8" } },
+                    border: {
+                        top: { style: "thin", color: { rgb: "CBD5E1" } },
+                        bottom: { style: "medium", color: { rgb: "0F172A" } },
+                        left: { style: "thin", color: { rgb: "CBD5E1" } },
+                        right: { style: "thin", color: { rgb: "CBD5E1" } }
+                    },
+                    alignment: { horizontal: "center", vertical: "center" }
+                };
+
+                const cellStyle = {
+                    font: { name: "Arial", sz: 10 },
+                    border: {
+                        top: { style: "thin", color: { rgb: "E2E8F0" } },
+                        bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+                        left: { style: "thin", color: { rgb: "E2E8F0" } },
+                        right: { style: "thin", color: { rgb: "E2E8F0" } }
+                    },
+                    alignment: { vertical: "center" }
+                };
+
+                const boldStyle = { ...cellStyle, font: { bold: true, name: "Arial", sz: 10 } };
+
+                function applyTableStyles(ws, headerRowCount = 1) {
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                            if (!ws[cellAddress]) continue;
+
+                            if (R < headerRowCount) {
+                                ws[cellAddress].s = headerStyle;
+                            } else {
+                                ws[cellAddress].s = cellStyle;
+                            }
+                        }
+                    }
+                }
+
+                // --- SHEET 1: SUMMARY ---
+                const summaryData = [
+                    ["Sales Monitoring - System Analytics Export", ""],
+                    ["Generated On", new Date().toLocaleString()],
+                    ["Date Range", `${dashStartDate} to ${dashEndDate}`],
+                    ["", ""],
+                    ["Key Metrics", "Value"],
+                    ["Gross Revenue (w/ VAT)", `₱ ${grossRevenue.toFixed(2)}`],
+                    ["Net Sales (No VAT)", `₱ ${netRevenue.toFixed(2)}`],
+                    ["VAT Amount (12%)", `₱ ${vatAmount.toFixed(2)}`],
+                    ["Total Discounts", `₱ ${data.stats.total_discount.toFixed(2)}`],
+                    ["Total Voids Loss", `₱ ${data.stats.void_amount.toFixed(2)} (${data.stats.void_qty} items)`],
+                    ["Cancelled Transactions", data.stats.cancelled_count],
+                    ["", ""],
+                    ["Payment Breakdown", ""],
+                    ["Top Method (By Txns)", data.stats.top_payment_method_count || "N/A"],
+                    ["Top Method (By Sales)", data.stats.top_payment_method_sales || "N/A"],
+                    ["Cash Payments", `₱ ${(data.stats.payment_breakdown.cash || 0).toFixed(2)}`],
+                    ["QRPh Payments", `₱ ${(data.stats.payment_breakdown.qrph || 0).toFixed(2)}`],
+                    ["Card Payments", `₱ ${(data.stats.payment_breakdown.card || 0).toFixed(2)}`],
+                    ["", ""],
+                    ["Operational Stats", ""],
+                    ["Total Transactions", data.stats.transactions],
+                    ["Total Guests", data.stats.total_guests_today],
+                    ["Active Guests (Current)", data.stats.active_guests],
+                    ["Occupied Tables (Current)", data.stats.occupied]
+                ];
+                const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+                wsSummary['!cols'] = [{ wch: 30 }, { wch: 25 }];
+
+                const sumRange = XLSX.utils.decode_range(wsSummary['!ref']);
+                for (let R = sumRange.s.r; R <= sumRange.e.r; ++R) {
+                    for (let C = sumRange.s.c; C <= sumRange.e.c; ++C) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        if (!wsSummary[cellAddress]) continue;
+
+                        wsSummary[cellAddress].s = cellStyle;
+                        // Header Titles
+                        if (R === 0 && C === 0) wsSummary[cellAddress].s = { font: { bold: true, sz: 16, color: { rgb: "1D4ED8" } }, alignment: { horizontal: "center" } };
+                        // Sub-headers
+                        if (R === 4 || R === 12 || R === 19) wsSummary[cellAddress].s = headerStyle;
+                        // Bold left column items
+                        if ((R >= 5 && R <= 10 && C === 0) || (R >= 13 && R <= 17 && C === 0) || (R >= 20 && C === 0)) wsSummary[cellAddress].s = boldStyle;
+                        // Green color for Revenue and Net Sales
+                        if (R >= 5 && R <= 6 && C === 1) wsSummary[cellAddress].s = { ...cellStyle, font: { bold: true, color: { rgb: "047857" } } };
+                    }
+                }
+                // Updated Merges for the new row indices
+                wsSummary['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+                    { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
+                    { s: { r: 19, c: 0 }, e: { r: 19, c: 1 } }
+                ];
+                XLSX.utils.book_append_sheet(wb, wsSummary, "Dashboard Summary");
+
+                // --- SHEET 2: REVENUE TREND ---
+                const trendData = data.charts.trend.map(d => {
+                    const gross = parseFloat(d.total);
+                    const net = gross / 1.12;
+                    return {
+                        "Date": new Date(d.date).toLocaleDateString(),
+                        "Gross Sales (w/ VAT)": `₱ ${gross.toFixed(2)}`,
+                        "Net Sales (No VAT)": `₱ ${net.toFixed(2)}`,
+                        "VAT Amount (12%)": `₱ ${(gross - net).toFixed(2)}`
+                    };
+                });
+                const wsTrend = XLSX.utils.json_to_sheet(trendData);
+                wsTrend['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+                applyTableStyles(wsTrend);
+                XLSX.utils.book_append_sheet(wb, wsTrend, "Revenue Trend");
+
+                // --- SHEET 3: HOURLY SALES ---
+                const hourlyData = data.charts.hourly_sales.map(d => {
+                    const h = parseInt(d.hour);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const hr12 = h % 12 || 12;
+                    const gross = parseFloat(d.sales);
+                    return {
+                        "Time (Hour)": `${hr12}:00 ${ampm}`,
+                        "Gross Sales (w/ VAT)": `₱ ${gross.toFixed(2)}`,
+                    };
+                });
+                const wsHourly = XLSX.utils.json_to_sheet(hourlyData);
+                wsHourly['!cols'] = [{ wch: 15 }, { wch: 20 }];
+                applyTableStyles(wsHourly);
+                XLSX.utils.book_append_sheet(wb, wsHourly, "Hourly Sales");
+
+                // --- SHEET 4: TOP SELLERS ---
+                const topItemsData = data.charts.top_items.map((i, index) => ({
+                    "Rank": index + 1,
+                    "Menu Item": i.menu_name,
+                    "Total Units Sold": i.total_sold
+                }));
+                const wsItems = XLSX.utils.json_to_sheet(topItemsData);
+                wsItems['!cols'] = [{ wch: 8 }, { wch: 30 }, { wch: 15 }];
+                applyTableStyles(wsItems);
+                XLSX.utils.book_append_sheet(wb, wsItems, "Top Sellers");
+
+                // --- SHEET 5: CATEGORY SALES ---
+                const categoryData = data.charts.category_sales.map(i => {
+                    const gross = parseFloat(i.sales);
+                    return {
+                        "Menu Category": i.category,
+                        "Gross Sales (w/ VAT)": `₱ ${gross.toFixed(2)}`
+                    };
+                });
+                const wsCategories = XLSX.utils.json_to_sheet(categoryData);
+                wsCategories['!cols'] = [{ wch: 25 }, { wch: 22 }];
+                applyTableStyles(wsCategories);
+                XLSX.utils.book_append_sheet(wb, wsCategories, "Category Sales");
+
+                // --- SHEET 6: WAITER LEADERBOARD ---
+                const waiterData = data.charts.top_waiters.map((w, index) => ({
+                    "Rank": index + 1,
+                    "Waiter Name": w.waiter_name,
+                    "Total Items Served": w.items_served,
+                    "Total Sales Generated": `₱ ${parseFloat(w.total_sales).toFixed(2)}`
+                }));
+                const wsWaiters = XLSX.utils.json_to_sheet(waiterData);
+                wsWaiters['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 20 }, { wch: 25 }];
+                applyTableStyles(wsWaiters);
+                XLSX.utils.book_append_sheet(wb, wsWaiters, "Waiter Leaderboard");
+
+                // --- SHEET 7: TRANSACTIONS ---
+                const txExportData = historyData.map(tx => ({
+                    "Transaction Number": tx.transaction_code || 'N/A',
+                    "Date": tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A',
+                    "Name": tx.guest_name || 'Guest',
+                    "No. of Guests": tx.guest_count,
+                    "Contact": tx.contact_number || 'N/A',
+                    "Email": tx.guest_email || 'N/A',
+                    "Food Sales": `₱ ${parseFloat(tx.food_sales || 0).toFixed(2)}`,
+                    "Beverage Sales": `₱ ${parseFloat(tx.drinkable_sales || 0).toFixed(2)}`,
+                    "Payment Method": tx.clean_payment_method || 'N/A',
+                    "Total Amount": tx.total_amount ? `₱ ${parseFloat(tx.total_amount).toFixed(2)}` : '₱ 0.00',
+                    "Total Discount": tx.discount ? `₱ ${parseFloat(tx.discount).toFixed(2)}` : '₱ 0.00',
+                    "Total Paid": tx.total_paid ? `₱ ${parseFloat(tx.total_paid).toFixed(2)}` : '₱ 0.00',
+                    "Total Change": tx.change_amount ? `₱ ${parseFloat(tx.change_amount).toFixed(2)}` : '₱ 0.00'
+                }));
+
+                const wsTx = XLSX.utils.json_to_sheet(txExportData);
+
+                // I updated the column widths to fit the 3 new columns perfectly
+                wsTx['!cols'] = [
+                    { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, // Tx, Date, Name, Guests
+                    { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 18 }, // Contact, Email, Food, Drinks
+                    { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 } // PayMethod, Totals...
+                ];
+
+                applyTableStyles(wsTx);
+                XLSX.utils.book_append_sheet(wb, wsTx, "Transactions");
+
+                // --- SHEET 8: SHIFT MANAGEMENT ---
+                const shiftExportData = shiftData.map(shift => {
+                    const isOpen = shift.status === 'open';
+                    return {
+                        "Shift ID": shift.id,
+                        "Cashier Name": `${shift.firstName} ${shift.lastName}`,
+                        "Status": shift.status.toUpperCase(),
+                        "Opening Amount": `₱ ${parseFloat(shift.opening_amount || 0).toFixed(2)}`,
+                        "Total Cash": isOpen ? 'Active...' : `₱ ${parseFloat(shift.total_cash || 0).toFixed(2)}`,
+                        "Total Non-Cash": isOpen ? 'Active...' : `₱ ${parseFloat(shift.total_non_cash || 0).toFixed(2)}`,
+                        "Expected Cash": isOpen ? '--' : `₱ ${parseFloat(shift.expected_cash || 0).toFixed(2)}`,
+                        "Actual Closing": isOpen ? '--' : `₱ ${parseFloat(shift.closing_amount || 0).toFixed(2)}`,
+                        "Variance (Short/Over)": isOpen ? '--' : `₱ ${parseFloat(shift.short_over || 0).toFixed(2)}`,
+                        "Date Opened": shift.created_at ? new Date(shift.created_at).toLocaleString() : 'N/A',
+                        "Date Closed": isOpen ? '--' : (shift.closed_at ? new Date(shift.closed_at).toLocaleString() : 'N/A')
+                    };
+                });
+
+                const wsShift = XLSX.utils.json_to_sheet(shiftExportData);
+                // I added one more column width here to fit the Date Closed perfectly!
+                wsShift['!cols'] = [
+                    { wch: 10 }, { wch: 25 }, { wch: 15 },
+                    { wch: 18 }, { wch: 18 }, { wch: 18 },
+                    { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 22 }
+                ];
+                applyTableStyles(wsShift);
+                XLSX.utils.book_append_sheet(wb, wsShift, "Shift Management");
+
+                // Generate and Save File
+                const fileName = `HarborBar_Analytics_${dashStartDate}_to_${dashEndDate}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+
+                showNotification('Export Successful!', `Your dashboard data has been cleanly exported to ${fileName}.`, true);
+            } catch (error) {
+                console.error("Excel Export Error:", error);
+                showNotification('Export Failed', 'An error occurred while generating the Excel file.', false);
+            } finally {
+                btnElement.innerHTML = originalHTML;
+                btnElement.disabled = false;
+            }
+        }
+
+        async function loadShifts() {
+            try {
+                const res = await fetch('/api/manager/shifts');
+                const data = await res.json();
+                const table = document.getElementById('shiftTable');
+
+                table.innerHTML = data.map(shift => {
+                    const isOpen = shift.status === 'open';
+
+                    let actions = '';
+                    if (isOpen) {
+                        actions = `<button onclick="promptCloseShift(${shift.id})" class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-500 hover:text-white transition-all shadow-sm"><i class="fa-solid fa-lock mr-1"></i> Close</button>`;
+                    } else {
+                        actions = `<span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-slate-100 text-slate-600">Closed</span>`;
+                    }
+
+                    let varianceHTML = '--';
+                    if (!isOpen) {
+                        const v = parseFloat(shift.short_over || 0);
+                        if (v < 0) varianceHTML = `<span class="text-rose-500 font-black">₱ ${v.toFixed(2)} (Short)</span>`;
+                        else if (v > 0) varianceHTML = `<span class="text-emerald-500 font-black">+₱ ${v.toFixed(2)} (Over)</span>`;
+                        else varianceHTML = `<span class="text-slate-400 font-bold">Exact</span>`;
+                    }
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
+                            <td class="p-6 text-primary font-black">#${shift.id}</td>
+                            <td class="p-6 text-slate-800 font-bold">${shift.firstName} ${shift.lastName}</td>
+                            <td class="p-6 font-bold text-slate-600">₱ ${parseFloat(shift.opening_amount || 0).toFixed(2)}</td>
+                            <td class="p-6 font-bold ${isOpen ? 'text-slate-300' : 'text-emerald-600'}">${isOpen ? 'Active...' : '₱ ' + parseFloat(shift.total_cash || 0).toFixed(2)}</td>
+                            <td class="p-6 font-bold ${isOpen ? 'text-slate-300' : 'text-indigo-500'}">${isOpen ? 'Active...' : '₱ ' + parseFloat(shift.total_non_cash || 0).toFixed(2)}</td>
+                            <td class="p-6 font-black text-slate-800">${isOpen ? '--' : '₱ ' + parseFloat(shift.expected_cash || 0).toFixed(2)}</td>
+                            <td class="p-6 font-black text-slate-800">${isOpen ? '--' : '₱ ' + parseFloat(shift.closing_amount || 0).toFixed(2)}</td>
+                            <td class="p-6">${varianceHTML}</td>
+                            <td class="p-6 text-center">${actions}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) { console.error("Shifts Error:", err); }
+        }
+
+        async function promptOpenShift() {
+            try {
+                const res = await fetch('/api/manager/employees');
+                const data = await res.json();
+                const select = document.getElementById('shiftEmployeeId');
+
+                const validStaff = data.filter(e => e.position === 'cashier' || e.position === 'manager');
+
+                select.innerHTML = validStaff.map(e =>
+                    `<option value="${e.id}">${e.firstName} ${e.lastName} (${e.position.toUpperCase()})</option>`
+                ).join('');
+
+                document.getElementById('shiftOpeningAmount').value = '0';
+                openModal('openShiftModal');
+            } catch (e) {
+                showNotification('Error', 'Could not load employee records.', false);
+            }
+        }
+
+        async function executeOpenShift() {
+            const empId = document.getElementById('shiftEmployeeId').value;
+            const amount = document.getElementById('shiftOpeningAmount').value;
+
+            try {
+                const res = await fetch('/api/manager/shift/open', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employee_id: empId, opening_amount: amount })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeModal('openShiftModal');
+                    setTimeout(() => {
+                        showNotification('Shift Opened', data.message, true);
+                        loadShifts();
+                    }, 350);
+                } else {
+                    showNotification('Action Denied', data.message, false);
+                }
+            } catch (err) {
+                showNotification('Error', 'Network connection failed.', false);
+            }
+        }
+
+        async function promptCloseShift(shiftId) {
+            document.getElementById('closeShiftId').value = shiftId;
+            document.getElementById('shiftClosingAmount').value = '';
+            try {
+                const res = await fetch(`/api/manager/shift/active_summary/${shiftId}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('shiftSumOpen').innerText = `₱${data.opening_amount.toFixed(2)}`;
+                    document.getElementById('shiftSumCash').innerText = `+ ₱${data.total_cash_sales.toFixed(2)}`;
+                    document.getElementById('shiftSumNonCash').innerText = `₱${data.total_non_cash.toFixed(2)}`;
+                    document.getElementById('shiftSumExpected').innerText = `₱${data.expected_cash.toFixed(2)}`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            openModal('closeShiftModal');
+        }
+
+        async function executeCloseShift() {
+            const shiftId = document.getElementById('closeShiftId').value;
+            const amount = document.getElementById('shiftClosingAmount').value;
+
+            if (amount === '') return showNotification('Required', 'Please enter a valid closing cash amount.', false);
+
+            try {
+                const res = await fetch('/api/manager/shift/close', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shift_id: shiftId, closing_amount: amount })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeModal('closeShiftModal');
+                    setTimeout(() => {
+                        showNotification('Shift Closed', data.message, true);
+                        loadShifts();
+                    }, 350);
+                } else {
+                    showNotification('Error', data.message, false);
+                }
+            } catch (err) {
+                showNotification('Error', 'Network connection failed.', false);
+            }
+        }
+
+        // --- SYSTEM SETTINGS ---
+        async function loadSettingsTab() {
+            try {
+                const res = await fetch('/api/manager/settings');
+                const data = await res.json();
+                if (data.success) {
+                    const scRateDecimal = parseFloat(data.settings.service_charge_rate || 0);
+                    document.getElementById('setting-sc-rate').value = (scRateDecimal * 100).toFixed(2);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function saveGlobalSettings() {
+            const scPercentage = parseFloat(document.getElementById('setting-sc-rate').value || 0);
+            const scDecimal = (scPercentage / 100).toFixed(4);
+
+            try {
+                const res = await fetch('/api/manager/settings/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service_charge_rate: scDecimal })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showNotification('Success', 'Global settings saved successfully.', true);
+                } else {
+                    showNotification('Error', data.message, false);
+                }
+            } catch (err) {
+                showNotification('Error', 'Failed to connect to server.', false);
+            }
+        }
+
+        async function loadCategoriesList() {
+            try {
+                const res = await fetch('/api/manager/categories');
+                const data = await res.json();
+
+                // 1. Populate the Category Manager Modal
+                const tbody = document.getElementById('categoryManagerTableBody');
+                if (tbody) {
+                    tbody.innerHTML = data.map(c => `
+                <tr class="group hover:bg-white transition-colors rounded-lg">
+                    <td class="py-3 px-3 font-bold text-slate-700">${c.category_name}</td>
+                    <td class="py-3 px-3 text-right">
+                        <button onclick="editCategoryPrompt('${c.category_name}')" class="w-8 h-8 rounded-lg bg-slate-100 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all mr-1"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick="deleteCategory('${c.category_name}')" class="w-8 h-8 rounded-lg bg-slate-100 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+                }
+
+                // 2. Dynamically populate the "Add Menu" dropdown
+                const menuSelect = document.getElementById('menuCategory');
+                if (menuSelect) {
+                    menuSelect.innerHTML = data.map(c => `<option value="${c.category_name}">${c.category_name}</option>`).join('');
+                }
+            } catch (e) { console.error("Error loading categories:", e); }
+        }
+
+        function openCategoryManager() {
+            loadCategoriesList();
+            cancelEditCategory(); // Reset inputs every time we open it
+            openModal('categoryManagerModal');
+        }
+
+        function editCategoryPrompt(catName) {
+            document.getElementById('manageCatOldName').value = catName;
+            document.getElementById('manageCatInput').value = catName;
+            document.getElementById('saveCatBtn').innerText = 'Update';
+            document.getElementById('saveCatBtn').classList.replace('bg-primary', 'bg-emerald-500');
+            document.getElementById('saveCatBtn').classList.replace('hover:bg-[#1e40af]', 'hover:bg-emerald-600');
+            document.getElementById('cancelCatBtn').classList.remove('hidden');
+        }
+
+        function cancelEditCategory() {
+            document.getElementById('manageCatOldName').value = '';
+            document.getElementById('manageCatInput').value = '';
+            document.getElementById('saveCatBtn').innerText = 'Add';
+            document.getElementById('saveCatBtn').classList.replace('bg-emerald-500', 'bg-primary');
+            document.getElementById('saveCatBtn').classList.replace('hover:bg-emerald-600', 'hover:bg-[#1e40af]');
+            document.getElementById('cancelCatBtn').classList.add('hidden');
+        }
+
+        async function saveCategory() {
+            const oldName = document.getElementById('manageCatOldName').value;
+            const newName = document.getElementById('manageCatInput').value.trim();
+
+            if (!newName) return showNotification('Error', 'Category name cannot be empty.', false);
+
+            try {
+                const res = await fetch('/api/manager/categories/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_name: oldName, new_name: newName })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showNotification('Success', oldName ? 'Category successfully updated!' : 'New category added!', true);
+                    cancelEditCategory();
+                    loadCategoriesList();
+                    loadInventory();
+                } else {
+                    showNotification('Error', data.message, false);
+                }
+            } catch (e) {
+                showNotification('Network Error', 'Failed to reach the server.', false);
+            }
+        }
+
+        async function deleteCategory(catName) {
+            try {
+                const res = await fetch(`/api/manager/categories/delete/${encodeURIComponent(catName)}`, { method: 'DELETE' });
+                const data = await res.json();
+
+                // This will block the deletion if the API detects it's currently used in the menu!
+                if (data.success) {
+                    showNotification('Deleted', data.message, true);
+                    loadCategoriesList();
+                } else {
+                    showNotification('Action Denied', data.message, false);
+                }
+            } catch (e) {
+                showNotification('Network Error', 'Failed to reach the server.', false);
+            }
+        }
+
+        let pendingDeleteMenuId = null;
+
+        function confirmDeleteMenu(menu_id) {
+            pendingDeleteMenuId = menu_id;
+            openModal('deleteMenuModal');
+        }
+
+        async function executeDeleteMenu() {
+            closeModal('deleteMenuModal');
+            if (!pendingDeleteMenuId) return;
+
+            try {
+                const res = await fetch(`/api/manager/menu/delete/${pendingDeleteMenuId}`, { method: 'DELETE' });
+                const data = await res.json();
+
+                // Slight delay to let the modal close animation finish
+                setTimeout(() => {
+                    if (data.success) {
+                        showNotification('Deleted', data.message, true);
+                        loadInventory();
+                    } else {
+                        // This will trigger our smart 1451 Foreign Key warning!
+                        showNotification('Action Denied', data.message, false);
+                    }
+                }, 300);
+            } catch (err) {
+                setTimeout(() => showNotification('Error', 'Failed to delete menu item.', false), 300);
+            }
+        }
+    </script>
+</body>
+
+</html>
