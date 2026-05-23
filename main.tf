@@ -15,10 +15,10 @@ resource "railway_project" "table_management" {
   description = "Flask + MySQL Deployment for Grading"
 }
 
-# 2. Provision the MySQL Database
+# 2. Provision the MySQL Database (Named "mysql" to trigger Internal DNS)
 resource "railway_service" "mysql_db" {
   project_id   = railway_project.table_management.id
-  name         = "MySQL Database"
+  name         = "mysql"
   source_image = "mysql:8"
 }
 
@@ -45,7 +45,7 @@ resource "railway_service" "flask_app" {
   source_repo_branch = "main"
 }
 
-# 4. Inject all Application Environment Variables
+# 4. Inject all Application Environment Variables (Using Clean Strings)
 resource "railway_variable" "secret_key" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
@@ -74,15 +74,12 @@ resource "railway_variable" "app_mysql_database" {
   value          = "railway"
 }
 
+# Using Internal DNS directly avoids the Terraform bug completely
 resource "railway_variable" "app_mysql_host" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
   name           = "MYSQLHOST"
-  value          = "$${{MySQL Database.RAILWAY_PRIVATE_DOMAIN}}" 
-  
-  lifecycle {
-    ignore_changes = [value]
-  }
+  value          = "mysql.railway.internal" 
 }
 
 resource "railway_variable" "app_mysql_port" {
@@ -96,22 +93,7 @@ resource "railway_variable" "mysql_url" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
   name           = "MYSQL_URL"
-  value          = "mysql://root:PlTLWwKtkioZFAhVQzsKEStRhheiGBBz@$${{MySQL Database.RAILWAY_PRIVATE_DOMAIN}}:3306/railway"
-  
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "railway_variable" "mysql_public_url" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQL_PUBLIC_URL"
-  value          = "mysql://root:PlTLWwKtkioZFAhVQzsKEStRhheiGBBz@$${{MySQL Database.RAILWAY_TCP_PROXY_DOMAIN}}:$${{MySQL Database.RAILWAY_TCP_PROXY_PORT}}/railway"
-  
-  lifecycle {
-    ignore_changes = [value]
-  }
+  value          = "mysql://root:PlTLWwKtkioZFAhVQzsKEStRhheiGBBz@mysql.railway.internal:3306/railway"
 }
 
 resource "railway_variable" "port" {
