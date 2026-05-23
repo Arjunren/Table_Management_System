@@ -53,10 +53,18 @@ app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 # ==========================================
 # PASTE THIS ENTIRE BLOCK RIGHT HERE
 # ==========================================
+# ==========================================
+# PASTE THIS ENTIRE BLOCK RIGHT HERE
+# ==========================================
 import time
 
 def initialize_database():
     max_retries = 10
+    
+    # 1. Lock onto the exact path so Gunicorn never loses the file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sql_file_path = os.path.join(current_dir, "tms_database.sql")
+    
     for attempt in range(max_retries):
         try:
             print(f"Checking database status (Attempt {attempt + 1}/{max_retries})...")
@@ -70,21 +78,31 @@ def initialize_database():
                 conn.close()
                 return
                 
-            print("Blank database detected! Running tms_database.sql...")
-            with open("tms_database.sql", "r") as sql_file:
-                sql_script = sql_file.read()
+            print("Blank database detected! Reading SQL file...")
+            
+            if not os.path.exists(sql_file_path):
+                print(f"CRITICAL ERROR: Cannot find {sql_file_path}")
+                return
                 
-            for _ in cursor.execute(sql_script, multi=True):
-                pass 
+            # 2. Read the file and manually split by ';' to avoid the multi=True bug
+            with open(sql_file_path, "r") as sql_file:
+                sql_commands = sql_file.read().split(';')
+                
+            print("Injecting tables into MySQL one by one...")
+            
+            # 3. Execute each command individually safely
+            for command in sql_commands:
+                if command.strip():  # Skip empty lines
+                    cursor.execute(command)
                 
             conn.commit()
             cursor.close()
             conn.close()
             print("Database initialized successfully!")
-            return
+            return  # Exit successfully
             
         except Exception as e:
-            print(f"Database not ready yet: {e}")
+            print(f"Database setup failed on attempt {attempt + 1}: {e}")
             print("Waiting 5 seconds before retrying...")
             time.sleep(5)
             
@@ -92,9 +110,6 @@ def initialize_database():
 
 # Trigger the function when the app boots
 initialize_database()
-# ==========================================
-# END OF DATABASE INIT BLOCK
-# ==========================================
 
 def print_to_escpos(text_data, printer_ip):
     if not printer_ip:
