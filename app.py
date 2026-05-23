@@ -1559,46 +1559,54 @@ def get_tx_history():
     query += " GROUP BY t.id ORDER BY t.created_at DESC"
     
     conn, cursor = get_db()
-    cursor.execute(query, tuple(params))
-    history = cursor.fetchall()
-    
-    history_data = []
-    for row in history:
-        gross = float(row['gross_items'] or 0)
-        expected = gross + (gross * get_service_charge_rate())
-        actual = float(row['total_amount'] or 0)
+    try:
+        cursor.execute(query, tuple(params))
+        history = cursor.fetchall()
         
-        discount = round(expected - actual, 2) if row['status'] == 'paid' else 0.0
-        if discount < 0: discount = 0.0
+        history_data = []
+        for row in history:
+            gross = float(row['gross_items'] or 0)
+            expected = gross + (gross * get_service_charge_rate())
+            actual = float(row['total_amount'] or 0)
+            
+            discount = round(expected - actual, 2) if row['status'] == 'paid' else 0.0
+            if discount < 0: discount = 0.0
 
-        pm = str(row['payment_method'] or 'N/A')
-        clean_pm = pm.split(' - ')[0] if ' - ' in pm else pm
-        if row['status'] != 'paid':
-            clean_pm = '--'
+            pm = str(row['payment_method'] or 'N/A')
+            clean_pm = pm.split(' - ')[0] if ' - ' in pm else pm
+            if row['status'] != 'paid':
+                clean_pm = '--'
 
-        history_data.append({
-            'id':                   row['id'],
-            'transaction_code':     row['transaction_code'],
-            'guest_name':           row['guest_name'] or '',
-            'contact_number':       row['contact_number'] or '',
-            'guest_email':          row['guest_email'] or '',
-            'status':               row['status'],
-            'created_at':           row['created_at'].isoformat() if row['created_at'] else None,
-            'guest_count':          row['guest_count'] or 0,
-            'table_summary':        row['table_summary'] or '',
-            'total_amount':         float(row['total_amount'] or 0),
-            'total_paid':           float(row['total_paid'] or 0),
-            'change_amount':        float(row['change_amount'] or 0),
-            'payment_method':       row['payment_method'] or '',
-            'gross_items':          float(row['gross_items'] or 0),
-            'food_sales':           float(row['food_sales'] or 0),
-            'drinkable_sales':      float(row['drinkable_sales'] or 0),
-            'discount':             discount,
-            'clean_payment_method': clean_pm,
-        })
+            history_data.append({
+                'id':                   row['id'],
+                'transaction_code':     row['transaction_code'],
+                'guest_name':           row['guest_name'] or '',
+                'contact_number':       row['contact_number'] or '',
+                'guest_email':          row['guest_email'] or '',
+                'status':               row['status'],
+                'created_at':           row['created_at'].isoformat() if row['created_at'] else None,
+                'guest_count':          row['guest_count'] or 0,
+                'table_summary':        row['table_summary'] or '',
+                'total_amount':         float(row['total_amount'] or 0),
+                'total_paid':           float(row['total_paid'] or 0),
+                'change_amount':        float(row['change_amount'] or 0),
+                'payment_method':       row['payment_method'] or '',
+                'gross_items':          float(row['gross_items'] or 0),
+                'food_sales':           float(row['food_sales'] or 0),
+                'drinkable_sales':      float(row['drinkable_sales'] or 0),
+                'discount':             discount,
+                'clean_payment_method': clean_pm,
+            })
 
-    cursor.close()
-    return jsonify(history_data)
+        return jsonify(history_data)
+
+    except Exception as e:
+        print(f"Error in get_tx_history: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/api/manager/transaction_files/<txn_code>', methods=['GET'])
 def get_txn_files(txn_code):

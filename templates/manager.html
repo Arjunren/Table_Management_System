@@ -1466,50 +1466,73 @@
         }
 
         async function loadHistory() {
-            try {
-                let url = '/api/manager/transactions_history';
-                const params = [];
-                if (histStartDate) params.push(`from_date=${histStartDate}`);
-                if (histEndDate) params.push(`to_date=${histEndDate}`);
-                if (params.length > 0) url += `?${params.join('&')}`;
+    const table = document.getElementById('historyTable');
+    try {
+        let url = '/api/manager/transactions_history';
+        const params = [];
+        if (histStartDate) params.push(`from_date=${histStartDate}`);
+        if (histEndDate) params.push(`to_date=${histEndDate}`);
+        if (params.length > 0) url += `?${params.join('&')}`;
 
-                const res = await fetch(url);
-                const data = await res.json();
-                const table = document.getElementById('historyTable');
+        const res = await fetch(url);
 
-                table.innerHTML = data.map(txn => {
-                    const isVoid = txn.status === 'cancelled';
-                    const isMerged = txn.status === 'merged';
-
-                    let badgeClass = 'bg-emerald-100 text-emerald-600';
-                    if (isVoid) badgeClass = 'bg-rose-100 text-rose-600';
-                    else if (isMerged) badgeClass = 'bg-blue-100 text-blue-600';
-
-                    const amt = parseFloat(txn.total_paid || 0).toFixed(2);
-                    const disc = parseFloat(txn.discount || 0).toFixed(2);
-
-                    return `
-                    <tr data-status="${txn.status}" class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
-                        <td class="p-4 text-primary font-black tracking-widest text-xs">${txn.transaction_code}</td>
-                        <td class="p-4">
-                            <p class="text-slate-800 font-bold">${txn.guest_name}</p>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-widest">${txn.table_summary || 'No Table'}</p>
-                        </td>
-                        <td class="p-4 font-black ${isVoid || isMerged ? 'text-slate-400 line-through decoration-2' : 'text-slate-900'} text-base">₱ ${amt}</td>
-                        <td class="p-4 font-black text-rose-500 text-sm">-₱ ${disc}</td>
-                        <td class="p-4 text-xs font-bold text-slate-500 uppercase">${txn.clean_payment_method}</td>
-                        <td class="p-4">
-                            <span class="px-2 py-1 rounded uppercase tracking-wider text-[10px] font-black ${badgeClass}">${txn.status}</span>
-                        </td>
-                        <td class="p-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(txn.created_at).toLocaleString()}</td>
-                        <td class="p-4 text-center">
-                            <button onclick="viewReceipt('${txn.transaction_code}')" class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-dark hover:text-white transition-all shadow-sm">Files</button>
-                        </td>
-                    </tr>
-                `}).join('');
-                applyHistoryFilters();
-            } catch (err) { console.error("History Error:", err); }
+        // Guard 1: catch non-2xx HTTP responses before trying to parse
+        if (!res.ok) {
+            const text = await res.text();
+            console.error(`History API returned HTTP ${res.status}:`, text.substring(0, 300));
+            table.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-500 font-bold">Server error (${res.status}). Check console.</td></tr>`;
+            return;
         }
+
+        const data = await res.json();
+
+        // Guard 2: catch object response (e.g. { success: false, message: '...' })
+        if (!Array.isArray(data)) {
+            console.error('History API returned non-array:', data);
+            table.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-500 font-bold">${data.message || 'Unexpected response from server.'}</td></tr>`;
+            return;
+        }
+
+        if (data.length === 0) {
+            table.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-bold">No transactions found for this period.</td></tr>`;
+            return;
+        }
+
+        table.innerHTML = data.map(txn => {
+            const isVoid = txn.status === 'cancelled';
+            const isMerged = txn.status === 'merged';
+            let badgeClass = 'bg-emerald-100 text-emerald-600';
+            if (isVoid) badgeClass = 'bg-rose-100 text-rose-600';
+            else if (isMerged) badgeClass = 'bg-blue-100 text-blue-600';
+            const amt = parseFloat(txn.total_paid || 0).toFixed(2);
+            const disc = parseFloat(txn.discount || 0).toFixed(2);
+            return `
+            <tr data-status="${txn.status}" class="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0">
+                <td class="p-4 text-primary font-black tracking-widest text-xs">${txn.transaction_code}</td>
+                <td class="p-4">
+                    <p class="text-slate-800 font-bold">${txn.guest_name}</p>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">${txn.table_summary || 'No Table'}</p>
+                </td>
+                <td class="p-4 font-black ${isVoid || isMerged ? 'text-slate-400 line-through decoration-2' : 'text-slate-900'} text-base">₱ ${amt}</td>
+                <td class="p-4 font-black text-rose-500 text-sm">-₱ ${disc}</td>
+                <td class="p-4 text-xs font-bold text-slate-500 uppercase">${txn.clean_payment_method}</td>
+                <td class="p-4">
+                    <span class="px-2 py-1 rounded uppercase tracking-wider text-[10px] font-black ${badgeClass}">${txn.status}</span>
+                </td>
+                <td class="p-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(txn.created_at).toLocaleString()}</td>
+                <td class="p-4 text-center">
+                    <button onclick="viewReceipt('${txn.transaction_code}')" class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-dark hover:text-white transition-all shadow-sm">Files</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        applyHistoryFilters();
+
+    } catch (err) {
+        console.error("History Error:", err);
+        table.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-500 font-bold">Failed to load transactions. Check console for details.</td></tr>`;
+    }
+}
 
         async function loadInventory() {
             try {
