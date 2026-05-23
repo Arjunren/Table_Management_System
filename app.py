@@ -12,7 +12,6 @@ from reprint_receipt import generate_official_receipt_reprint_text
 import mysql.connector
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import time
 
 load_dotenv()
 UPLOAD_FOLDER = 'static/uploads'
@@ -51,16 +50,19 @@ app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'QAZBnxTjeKAqxPbbASlonHywPRxGcqYV')
 app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 
+# ==========================================
+# PASTE THIS ENTIRE BLOCK RIGHT HERE
+# ==========================================
+import time
+
 def initialize_database():
-    max_retries = 10  # Try 10 times before giving up
-    
+    max_retries = 10
     for attempt in range(max_retries):
         try:
             print(f"Checking database status (Attempt {attempt + 1}/{max_retries})...")
-            # Attempt to connect
             conn, cursor = get_db()
             
-            # Check if your core tables exist
+            # Check if tables already exist
             cursor.execute("SHOW TABLES LIKE 'employee_management'")
             if cursor.fetchone():
                 print("Database tables already exist. Skipping initialization.")
@@ -69,7 +71,6 @@ def initialize_database():
                 return
                 
             print("Blank database detected! Running tms_database.sql...")
-            
             with open("tms_database.sql", "r") as sql_file:
                 sql_script = sql_file.read()
                 
@@ -80,18 +81,20 @@ def initialize_database():
             cursor.close()
             conn.close()
             print("Database initialized successfully!")
-            return # Exit the loop and function because it succeeded!
+            return
             
         except Exception as e:
-            # If it fails, print the error, wait 5 seconds, and loop again
             print(f"Database not ready yet: {e}")
             print("Waiting 5 seconds before retrying...")
             time.sleep(5)
             
     print("CRITICAL: Could not connect to the database after maximum retries.")
 
-# Call the function
+# Trigger the function when the app boots
 initialize_database()
+# ==========================================
+# END OF DATABASE INIT BLOCK
+# ==========================================
 
 def print_to_escpos(text_data, printer_ip):
     if not printer_ip:
