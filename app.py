@@ -43,7 +43,7 @@ def get_service_charge_rate():
 app = Flask(__name__)
 CORS(app)
 
-app.secret_key = os.environ.get('SECRET_KEY')
+app.secret_key = os.environ.get('Secret_Key') or os.environ.get('SECRET_KEY') or 'default-fallback-key'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'mysql.railway.internal')
 app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
