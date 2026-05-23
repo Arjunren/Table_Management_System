@@ -1513,45 +1513,72 @@ def save_staff_record():
 def get_tx_history():
     if session.get('role') != 'manager':
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        
+
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
-    
+
     query = """
-        SELECT t.id, t.transaction_code, t.guest_name, t.contact_number, t.guest_email, t.status, t.created_at, t.guest_count,
-               GROUP_CONCAT(DISTINCT tb.table_name SEPARATOR ', ') as table_summary,
-               r.total_amount, r.amount_paid as total_paid, r.change_amount, r.payment_summary as payment_method,
-               (
-                   SELECT SUM(o.total_price) 
-                   FROM order_items o 
-                   WHERE o.transaction_id = t.id AND o.status != 'void'
-               ) as gross_items,
-               (
-                   SELECT SUM(o.total_price) 
-                   FROM order_items o 
-                   JOIN main_menu_management m ON o.menu_id = m.menu_id 
-                   WHERE o.transaction_id = t.id AND o.status != 'void' AND m.type = 'solid'
-               ) as food_sales,
-               (
-                   SELECT SUM(o.total_price) 
-                   FROM order_items o 
-                   JOIN main_menu_management m ON o.menu_id = m.menu_id 
-                   WHERE o.transaction_id = t.id AND o.status != 'void' AND m.type = 'drinkable'
-               ) as drinkable_sales
+        SELECT
+            t.id,
+            t.transaction_code,
+            t.guest_name,
+            t.contact_number,
+            t.guest_email,
+            t.status,
+            t.created_at,
+            t.guest_count,
+            (
+                SELECT GROUP_CONCAT(DISTINCT tb2.table_name SEPARATOR ', ')
+                FROM transaction_tables tt2
+                JOIN tables tb2 ON tt2.table_id = tb2.id
+                WHERE tt2.transaction_id = t.id
+            ) AS table_summary,
+            (
+                SELECT r2.total_amount
+                FROM receipts r2
+                WHERE r2.transaction_id = t.id
+                ORDER BY r2.id DESC LIMIT 1
+            ) AS total_amount,
+            (
+                SELECT r2.amount_paid
+                FROM receipts r2
+                WHERE r2.transaction_id = t.id
+                ORDER BY r2.id DESC LIMIT 1
+            ) AS total_paid,
+            (
+                SELECT r2.change_amount
+                FROM receipts r2
+                WHERE r2.transaction_id = t.id
+                ORDER BY r2.id DESC LIMIT 1
+            ) AS change_amount,
+            (
+                SELECT r2.payment_summary
+                FROM receipts r2
+                WHERE r2.transaction_id = t.id
+                ORDER BY r2.id DESC LIMIT 1
+            ) AS payment_method,
+            (
+                SELECT SUM(o.total_price)
+                FROM order_items o
+                WHERE o.transaction_id = t.id AND o.status != 'void'
+            ) AS gross_items,
+            (
+                SELECT SUM(o.total_price)
+                FROM order_items o
+                JOIN main_menu_management m ON o.menu_id = m.menu_id
+                WHERE o.transaction_id = t.id AND o.status != 'void' AND m.type = 'solid'
+            ) AS food_sales,
+            (
+                SELECT SUM(o.total_price)
+                FROM order_items o
+                JOIN main_menu_management m ON o.menu_id = m.menu_id
+                WHERE o.transaction_id = t.id AND o.status != 'void' AND m.type = 'drinkable'
+            ) AS drinkable_sales
         FROM transactions t
-        LEFT JOIN transaction_tables tt ON t.id = tt.transaction_id
-        LEFT JOIN tables tb ON tt.table_id = tb.id
-        LEFT JOIN (
-            SELECT transaction_id, total_amount, amount_paid, change_amount, payment_summary
-            FROM receipts
-            WHERE id IN (
-                SELECT MAX(id) FROM receipts GROUP BY transaction_id
-            )
-        ) r ON t.id = r.transaction_id
         WHERE t.status IN ('paid', 'cancelled', 'merged')
     """
     params = []
-    
+
     if from_date and to_date:
         query += " AND DATE(t.created_at) BETWEEN %s AND %s"
         params.extend([from_date, to_date])
@@ -1561,22 +1588,23 @@ def get_tx_history():
     elif to_date:
         query += " AND DATE(t.created_at) <= %s"
         params.append(to_date)
-        
-    query += " GROUP BY t.id ORDER BY t.created_at DESC"
-    
+
+    query += " ORDER BY t.created_at DESC"
+
     conn, cursor = get_db()
     try:
         cursor.execute(query, tuple(params))
         history = cursor.fetchall()
-        
+
         history_data = []
         for row in history:
             gross = float(row['gross_items'] or 0)
             expected = gross + (gross * get_service_charge_rate())
             actual = float(row['total_amount'] or 0)
-            
+
             discount = round(expected - actual, 2) if row['status'] == 'paid' else 0.0
-            if discount < 0: discount = 0.0
+            if discount < 0:
+                discount = 0.0
 
             pm = str(row['payment_method'] or 'N/A')
             clean_pm = pm.split(' - ')[0] if ' - ' in pm else pm
