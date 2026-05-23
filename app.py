@@ -1541,7 +1541,13 @@ def get_tx_history():
         FROM transactions t
         LEFT JOIN transaction_tables tt ON t.id = tt.transaction_id
         LEFT JOIN tables tb ON tt.table_id = tb.id
-        LEFT JOIN receipts r ON t.id = r.transaction_id
+        LEFT JOIN (
+            SELECT transaction_id, total_amount, amount_paid, change_amount, payment_summary
+            FROM receipts
+            WHERE id IN (
+                SELECT MAX(id) FROM receipts GROUP BY transaction_id
+            )
+        ) r ON t.id = r.transaction_id
         WHERE t.status IN ('paid', 'cancelled', 'merged')
     """
     params = []
