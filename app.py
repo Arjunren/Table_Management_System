@@ -19,11 +19,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_db():
     conn = mysql.connector.connect(
-        host=os.environ.get('MYSQLHOST', 'mysql.railway.internal'),         # Changed from MYSQL_HOST
-        user=os.environ.get('MYSQLUSER', 'root'),              # Changed from MYSQL_USER
-        password=os.environ.get('MYSQLPASSWORD', ''),          # Changed from MYSQL_PASSWORD
-        database=os.environ.get('MYSQLDATABASE', 'railway'),   # Changed from MYSQL_DB
-        port=int(os.environ.get('MYSQLPORT', 3306))            # Added port handling
+        host=os.environ.get('MYSQLHOST', 'mysql.railway.internal'),      
+        user=os.environ.get('MYSQLUSER', 'root'),             
+        password=os.environ.get('MYSQLPASSWORD', ''),        
+        database=os.environ.get('MYSQLDATABASE', 'railway'),  
+        port=int(os.environ.get('MYSQLPORT', 3306))       
     )
     cursor = conn.cursor(dictionary=True)
     return conn, cursor
@@ -95,11 +95,9 @@ def login():
     account = cursor.fetchone()
 
     if account:
-        # Check password for ALL roles first
         if account['password'] != password:
             return jsonify({'success': False, 'message': 'Please try again.'}), 401
 
-        # Proceed with role-specific logic
         if account['position'] == 'waiter':
             pass 
         elif account['position'] == 'manager':
