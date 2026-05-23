@@ -1570,18 +1570,32 @@ def get_tx_history():
         
         discount = round(expected - actual, 2) if row['status'] == 'paid' else 0.0
         if discount < 0: discount = 0.0
-        row['discount'] = discount
-        
-        row['guest_count'] = row['guest_count'] or 0
-        row['food_sales'] = float(row['food_sales'] or 0)
-        row['drinkable_sales'] = float(row['drinkable_sales'] or 0)
-        
+
         pm = str(row['payment_method'] or 'N/A')
-        row['clean_payment_method'] = pm.split(' - ')[0] if ' - ' in pm else pm
+        clean_pm = pm.split(' - ')[0] if ' - ' in pm else pm
         if row['status'] != 'paid':
-            row['clean_payment_method'] = '--'
-            
-        history_data.append(row)
+            clean_pm = '--'
+
+        history_data.append({
+            'id':                   row['id'],
+            'transaction_code':     row['transaction_code'],
+            'guest_name':           row['guest_name'] or '',
+            'contact_number':       row['contact_number'] or '',
+            'guest_email':          row['guest_email'] or '',
+            'status':               row['status'],
+            'created_at':           row['created_at'].isoformat() if row['created_at'] else None,
+            'guest_count':          row['guest_count'] or 0,
+            'table_summary':        row['table_summary'] or '',
+            'total_amount':         float(row['total_amount'] or 0),
+            'total_paid':           float(row['total_paid'] or 0),
+            'change_amount':        float(row['change_amount'] or 0),
+            'payment_method':       row['payment_method'] or '',
+            'gross_items':          float(row['gross_items'] or 0),
+            'food_sales':           float(row['food_sales'] or 0),
+            'drinkable_sales':      float(row['drinkable_sales'] or 0),
+            'discount':             discount,
+            'clean_payment_method': clean_pm,
+        })
 
     cursor.close()
     return jsonify(history_data)
@@ -1627,11 +1641,22 @@ def get_txn_files(txn_code):
     
     cursor.close()
 
+    def _safe(v):
+        from decimal import Decimal
+        if hasattr(v, 'isoformat'):   # datetime / date
+            return v.isoformat()
+        if isinstance(v, Decimal):
+            return float(v)
+        return v
+
+    safe_txn = {k: _safe(v) for k, v in txn.items()} if txn else {}
+    safe_items = [{k: _safe(v) for k, v in item.items()} for item in items]
+
     return jsonify({
-        'success': True, 
-        'files': files_found, 
-        'items': items, 
-        'transaction': txn
+        'success': True,
+        'files': files_found,
+        'items': safe_items,
+        'transaction': safe_txn
     })
 
 @app.route('/download_receipt/<folder>/<filename>')
