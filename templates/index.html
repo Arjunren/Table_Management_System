@@ -104,7 +104,8 @@
                 </div>
             </div>
 
-            <div id="passwordContainer" class="relative group hidden">
+            <!-- Removed 'hidden' class so the password shows by default -->
+            <div id="passwordContainer" class="relative group">
                 <label
                     class="block mb-1 sm:mb-2 text-[10px] sm:text-xs font-semibold text-blue-600 uppercase tracking-wider">Password</label>
                 <div class="relative">
@@ -116,7 +117,8 @@
                                 clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <input type="password" id="password" placeholder="••••••••"
+                    <!-- Added 'required' attribute -->
+                    <input type="password" id="password" required placeholder="••••••••"
                         class="w-full pl-10 pr-12 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm">
 
                     <button type="button" onclick="togglePassword()"
@@ -165,24 +167,17 @@
     </div>
 
     <script>
-        // Setup Login Modes
+        // Setup Login Modes - Updated to keep password required for both
         function setLoginMode(mode) {
-            const pwContainer = document.getElementById('passwordContainer');
-            const pwInput = document.getElementById('password');
             const tabWaiter = document.getElementById('tabWaiter');
             const tabManagement = document.getElementById('tabManagement');
 
             if (mode === 'waiter') {
                 tabWaiter.className = "flex-1 py-2.5 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
                 tabManagement.className = "flex-1 py-2.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
-                pwContainer.classList.add('hidden');
-                pwInput.required = false;
-                pwInput.value = ''; // Clear out the password
             } else {
                 tabManagement.className = "flex-1 py-2.5 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600 transition-all";
                 tabWaiter.className = "flex-1 py-2.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
-                pwContainer.classList.remove('hidden');
-                pwInput.required = true;
             }
         }
 

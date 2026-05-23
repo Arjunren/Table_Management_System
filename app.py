@@ -95,15 +95,16 @@ def login():
     account = cursor.fetchone()
 
     if account:
+        # Check password for ALL roles first
+        if account['password'] != password:
+            return jsonify({'success': False, 'message': 'Please try again.'}), 401
+
+        # Proceed with role-specific logic
         if account['position'] == 'waiter':
             pass 
         elif account['position'] == 'manager':
-            if account['password'] != password:
-                return jsonify({'success': False, 'message': 'Please try again.'}), 401
+            pass
         elif account['position'] == 'cashier':
-            if account['password'] != password:
-                return jsonify({'success': False, 'message': 'Please try again.'}), 401
-            
             cursor.execute("SELECT id FROM cash_drawer WHERE employee_id = %s AND status = 'open' LIMIT 1", (account['id'],))
             active_shift = cursor.fetchone()
             
