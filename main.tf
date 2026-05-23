@@ -100,7 +100,7 @@ resource "railway_variable" "port" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
   name           = "PORT"
-  value          = "8080"
+  value          = "5000"
 }
 
 # 5. Generate the Public Web Address

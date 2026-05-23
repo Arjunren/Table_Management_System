@@ -47,7 +47,7 @@ app.secret_key = os.environ.get('SECRET_KEY')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'mysql.railway.internal')
 app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'QAZBnxTjeKAqxPbbASlonHywPRxGcqYV')
+app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'PlTLWwKtkioZFAhVQzsKEStRhheiGBBz')
 app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 
 # ==========================================
