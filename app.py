@@ -50,6 +50,36 @@ app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'QAZBnxTjeKAqxPbbASlonHywPRxGcqYV')
 app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 
+def initialize_database():
+    try:
+        print("Checking database status...")
+        conn, cursor = get_db()
+        
+        cursor.execute("SHOW TABLES LIKE 'employee_management'")
+        if cursor.fetchone():
+            print("Database tables already exist. Skipping initialization.")
+            cursor.close()
+            conn.close()
+            return
+            
+        print("Blank database detected! Running tms_database.sql...")
+        
+        with open("tms_database.sql", "r") as sql_file:
+            sql_script = sql_file.read()
+            
+        for _ in cursor.execute(sql_script, multi=True):
+            pass 
+            
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Database initialized successfully!")
+        
+    except Exception as e:
+        print(f"Failed to initialize database: {e}")
+
+initialize_database()
+
 def print_to_escpos(text_data, printer_ip):
     if not printer_ip:
         print("--------------------------------------------------")

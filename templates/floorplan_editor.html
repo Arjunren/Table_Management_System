@@ -356,7 +356,6 @@
         let dragId = '';
         let offsetX, offsetY;
 
-        // NEW: Snap to Grid Settings
         let snapToGrid = true;
         const GRID_SIZE = 20;
 
@@ -390,7 +389,6 @@
             } catch (err) { console.log('Notice: Failed to fetch data. Waiting for save.'); }
         }
 
-        // ---------- IMAGE UPLOAD LOGIC ----------
         async function uploadDesignImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -437,7 +435,6 @@
             document.getElementById('unsavedBadge').classList.add('hidden');
         }
 
-        // ---------- RENDERING ----------
         function renderCanvas() {
             document.getElementById('dynamic-tables').innerHTML = '';
             document.getElementById('dynamic-elements').innerHTML = '';
@@ -571,7 +568,6 @@
             container.appendChild(g);
         }
 
-        // ---------- DRAG AND DROP ----------
         function startDrag(evt) {
             isDragging = false;
             dragTarget = evt.currentTarget;
@@ -602,7 +598,6 @@
             pt.x = evt.clientX; pt.y = evt.clientY;
             const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
 
-            // NEW: Added Grid Snapping Logic
             let rawX = cursorPt.x - offsetX;
             let rawY = cursorPt.y - offsetY;
 
@@ -612,7 +607,6 @@
             const item = dragType === 'table' ? layoutData.tables[dragId] : layoutData.elements[dragId];
             const shape = dragTarget.querySelector('.target-shape');
 
-            // Handle Tables, Shapes, and Images
             if (dragType === 'table' || (dragType === 'element' && item.elType === 'shape') || (dragType === 'element' && item.elType === 'image')) {
                 const text = dragTarget.querySelector('text');
                 if (item.shapeType === 'rect' || item.shape === 'rect' || item.elType === 'image') {
@@ -672,7 +666,6 @@
             setTimeout(() => { isDragging = false; }, 50);
         }
 
-        // ---------- ADD NEW ITEMS ----------
         function addItem(type) {
             const tempId = 'temp_' + Date.now();
             // Snap new items to grid automatically
@@ -708,7 +701,6 @@
             renderCanvas();
         }
 
-        // ---------- TOGGLE TRANSPARENT ----------
         function toggleTransparent() {
             const isTrans = document.getElementById('isTransparent').checked;
             const fillInput = document.getElementById('editFillColor');
@@ -727,7 +719,6 @@
             }
         }
 
-        // ---------- EDITOR MODAL ----------
         function openEditor(mainType, id) {
             document.getElementById('editMainType').value = mainType;
             document.getElementById('editId').value = id;
@@ -816,7 +807,6 @@
                     document.getElementById('editWidth').value = item.width;
                     document.getElementById('editHeight').value = item.height;
 
-                    // Hide color pickers
                     document.getElementById('colFill').classList.add('hidden');
                     document.getElementById('colStroke').classList.add('hidden');
                     document.getElementById('colText').classList.add('hidden');
@@ -902,9 +892,7 @@
             renderCanvas();
         }
 
-        // ---------- SAVING & EXIT ----------
         async function saveLayout() {
-            // Strip the "t_" / "e_" key prefix from saved items so the backend gets the real numeric DB id
             function stripPrefix(item) {
                 const cleaned = Object.assign({}, item);
                 if (typeof cleaned.id === 'string' && /^[te]_\d+$/i.test(cleaned.id)) {
@@ -944,7 +932,6 @@
             }
         }
 
-        // ---------- SETTINGS MODAL & API ----------
         function openSettingsModal() {
             document.getElementById('settingColorVacant').value = globalSettings.color_vacant;
             document.getElementById('settingColorOccupied').value = globalSettings.color_occupied;
@@ -975,7 +962,6 @@
             } catch (err) { showNotice('Error', 'Failed to save settings.', 'error'); }
         }
 
-        // ---------- UI HELPERS ----------
         function openModal(id) {
             const m = document.getElementById(id);
             m.classList.remove('hidden'); m.classList.add('flex');

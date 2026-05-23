@@ -1,0 +1,20 @@
+1. Install this
+WINDOWS
+winget install Hashicorp.Terraform
+
+MAC
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+
+2. Paste this
+WINDOWS
+$env:RAILWAY_TOKEN="948385a1-c816-4a2c-9b70-5d63d037e2cc"
+
+MAC/Linux
+export RAILWAY_TOKEN="948385a1-c816-4a2c-9b70-5d63d037e2cc"
+
+3. Run
+terraform init
+
+4. Deploy
+terraform apply -parallelism=1
