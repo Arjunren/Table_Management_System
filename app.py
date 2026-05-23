@@ -13,6 +13,7 @@ import mysql.connector
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
+load_dotenv()
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -20,7 +21,7 @@ def get_db():
     conn = mysql.connector.connect(
         host=os.environ.get('MYSQLHOST', 'mysql.railway.internal'),         # Changed from MYSQL_HOST
         user=os.environ.get('MYSQLUSER', 'root'),              # Changed from MYSQL_USER
-        password=os.environ.get('MYSQLPASSWORD', 'PlTLWwKtkioZFAhVQzsKEStRhheiGBBz'),          # Changed from MYSQL_PASSWORD
+        password=os.environ.get('MYSQLPASSWORD', ''),          # Changed from MYSQL_PASSWORD
         database=os.environ.get('MYSQLDATABASE', 'railway'),   # Changed from MYSQL_DB
         port=int(os.environ.get('MYSQLPORT', 3306))            # Added port handling
     )
@@ -38,8 +39,6 @@ def get_service_charge_rate():
     except Exception as e:
         print(f"Error fetching service charge: {e}")
     return 0.00
-
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -2113,6 +2112,7 @@ def bulk_save_floorplan():
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
     data = request.json
+    conn = None
     try:
         conn, cursor = get_db()
         
@@ -2147,9 +2147,12 @@ def bulk_save_floorplan():
 
         conn.commit()
         cursor.close()
+        conn.close()
         return jsonify({'success': True, 'message': 'Layout saved securely.'})
     except Exception as e:
-        conn.rollback()
+        if conn:
+            conn.rollback()
+            conn.close()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/manager/floorplan/upload_image', methods=['POST'])

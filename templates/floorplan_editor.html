@@ -90,7 +90,7 @@
                 </button>
                 <input type="file" id="designUploadInput" class="hidden" accept="image/png, image/jpeg, image/jpg"
                     onchange="uploadDesignImage(event)">
-                
+
                 <button onclick="toggleGridSnap()" id="btnGridSnap"
                     class="toolbar-btn bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 ml-2 border border-sky-200">
                     <i class="fa-solid fa-border-all"></i> Snap: ON
@@ -365,7 +365,7 @@
         function toggleGridSnap() {
             snapToGrid = !snapToGrid;
             const btn = document.getElementById('btnGridSnap');
-            if(snapToGrid) {
+            if (snapToGrid) {
                 btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Snap: ON';
                 btn.className = "toolbar-btn bg-sky-100 hover:bg-sky-200 text-sky-700 px-4 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 ml-2 border border-sky-200";
             } else {
@@ -411,8 +411,8 @@
                         id: tempId,
                         elType: 'image',
                         content: data.path, // Store the image URL
-                        posX: snapToGrid ? Math.round(500/GRID_SIZE)*GRID_SIZE : 500,
-                        posY: snapToGrid ? Math.round(400/GRID_SIZE)*GRID_SIZE : 400,
+                        posX: snapToGrid ? Math.round(500 / GRID_SIZE) * GRID_SIZE : 500,
+                        posY: snapToGrid ? Math.round(400 / GRID_SIZE) * GRID_SIZE : 400,
                         width: 150,
                         height: 150
                     };
@@ -676,8 +676,8 @@
         function addItem(type) {
             const tempId = 'temp_' + Date.now();
             // Snap new items to grid automatically
-            const startX = snapToGrid ? Math.round(500/GRID_SIZE)*GRID_SIZE : 500;
-            const startY = snapToGrid ? Math.round(400/GRID_SIZE)*GRID_SIZE : 400;
+            const startX = snapToGrid ? Math.round(500 / GRID_SIZE) * GRID_SIZE : 500;
+            const startY = snapToGrid ? Math.round(400 / GRID_SIZE) * GRID_SIZE : 400;
 
             if (type === 'table') {
                 layoutData.tables[tempId] = {
@@ -697,7 +697,7 @@
                     fillColor: '#E2E8F0', strokeColor: '#94A3B8', strokeWidth: 4
                 };
             } else if (type === 'line') {
-                const startX2 = snapToGrid ? Math.round(600/GRID_SIZE)*GRID_SIZE : 600;
+                const startX2 = snapToGrid ? Math.round(600 / GRID_SIZE) * GRID_SIZE : 600;
                 layoutData.elements[tempId] = {
                     id: tempId, elType: 'line',
                     posX: startX - 100, posY: startY, posX2: startX2, posY2: startY,
@@ -907,8 +907,8 @@
             // Strip the "t_" / "e_" key prefix from saved items so the backend gets the real numeric DB id
             function stripPrefix(item) {
                 const cleaned = Object.assign({}, item);
-                if (typeof cleaned.id === 'string' && /^[a-z]+_\d+$/i.test(cleaned.id)) {
-                    cleaned.id = cleaned.id.replace(/^[a-z]+_/i, '');
+                if (typeof cleaned.id === 'string' && /^[te]_\d+$/i.test(cleaned.id)) {
+                    cleaned.id = cleaned.id.replace(/^[te]_/i, '');
                 }
                 return cleaned;
             }
