@@ -9,13 +9,11 @@ terraform {
 
 provider "railway" {}
 
-# 1. Create the Railway Project
 resource "railway_project" "table_management" {
   name        = "Table Management System"
   description = "Flask + MySQL Deployment for Grading"
 }
 
-# 2. Provision the MySQL Database (Named "mysql" to trigger Internal DNS)
 resource "railway_service" "mysql_db" {
   project_id   = railway_project.table_management.id
   name         = "mysql"
@@ -45,7 +43,6 @@ resource "railway_service" "flask_app" {
   source_repo_branch = "main"
 }
 
-# 4. Inject all Application Environment Variables (Using Clean Strings)
 resource "railway_variable" "secret_key" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
@@ -74,7 +71,6 @@ resource "railway_variable" "app_mysql_database" {
   value          = "railway"
 }
 
-# Using Internal DNS directly avoids the Terraform bug completely
 resource "railway_variable" "app_mysql_host" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
@@ -103,9 +99,8 @@ resource "railway_variable" "port" {
   value          = "5000"
 }
 
-# 5. Generate the Public Web Address
 resource "railway_service_domain" "public_url" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
-  subdomain      = "tms-arjunren-grading-123" 
+  subdomain      = "tms-arjunren-grading-v2" 
 }
