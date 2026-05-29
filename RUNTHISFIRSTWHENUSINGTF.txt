@@ -6,9 +6,9 @@ MAC
 brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
 
-2. Paste this
+2. Change and Paste this with your own API TOKEN
 WINDOWS
-$env:RAILWAY_TOKEN="948385a1-c816-4a2c-9b70-5d63d037e2cc"
+$env:RAILWAY_TOKEN="948385a1-c816-4a2c-9b70-5d63d037e2cc" 
 
 MAC/Linux
 export RAILWAY_TOKEN="948385a1-c816-4a2c-9b70-5d63d037e2cc"
@@ -18,3 +18,17 @@ terraform init
 
 4. Deploy
 terraform apply -parallelism=1
+
+
+------ FOR NEW TF -----
+5. To Destroy
+terraform destroy -auto-approve
+
+6. To init
+terraform init
+
+7. To apply
+terraform apply -auto-approve
+
+8. If there is error
+terraform state rm railway_variable_collection.flask_vars

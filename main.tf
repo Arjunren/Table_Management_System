@@ -4,16 +4,23 @@ terraform {
       source  = "terraform-community-providers/railway"
       version = "~> 0.6.2"
     }
+    # Adding the time provider back so Terraform can pause while Railway builds
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9.1"
+    }
   }
 }
 
 provider "railway" {}
 
+# 1. Create the Project
 resource "railway_project" "table_management" {
   name        = "Table Management System"
   description = "Flask + MySQL Deployment for Grading"
 }
 
+# 2. Deploy the MySQL Database
 resource "railway_service" "mysql_db" {
   project_id   = railway_project.table_management.id
   name         = "mysql"
@@ -21,18 +28,20 @@ resource "railway_service" "mysql_db" {
 }
 
 # Set up the core MySQL database credentials
-resource "railway_variable" "mysql_root_password" {
+resource "railway_variable_collection" "mysql_vars" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.mysql_db.id
-  name           = "MYSQL_ROOT_PASSWORD"
-  value          = "PlTLWwKtkioZFAhVQzsKEStRhheiGBBz"
-}
-
-resource "railway_variable" "mysql_database_name" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.mysql_db.id
-  name           = "MYSQL_DATABASE"
-  value          = "railway"
+  
+  variables = [
+    {
+      name  = "MYSQL_ROOT_PASSWORD"
+      value = "PlTLWwKtkioZFAhVQzsKEStRhheiGBBz"
+    },
+    {
+      name  = "MYSQL_DATABASE"
+      value = "railway"
+    }
+  ]
 }
 
 # 3. Deploy the Python Flask Web Application
@@ -43,64 +52,61 @@ resource "railway_service" "flask_app" {
   source_repo_branch = "main"
 }
 
-resource "railway_variable" "secret_key" {
+# Set up all Flask variables
+resource "railway_variable_collection" "flask_vars" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
-  name           = "Secret_Key"
-  value          = "SuperSecretKey123"
+  
+  variables = [
+    {
+      name  = "Secret_Key"
+      value = "SuperSecretKey123"
+    },
+    {
+      name  = "MYSQLUSER"
+      value = "root"
+    },
+    {
+      name  = "MYSQLPASSWORD"
+      value = "PlTLWwKtkioZFAhVQzsKEStRhheiGBBz"
+    },
+    {
+      name  = "MYSQLDATABASE"
+      value = "railway"
+    },
+    {
+      name  = "MYSQLHOST"
+      value = "mysql.railway.internal"
+    },
+    {
+      name  = "MYSQLPORT"
+      value = "3306"
+    },
+    {
+      name  = "MYSQL_URL"
+      value = "mysql://root:PlTLWwKtkioZFAhVQzsKEStRhheiGBBz@mysql.railway.internal:3306/railway"
+    },
+    {
+      name  = "PORT"
+      value = "5000"
+    }
+  ]
 }
 
-resource "railway_variable" "app_mysql_user" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQLUSER"
-  value          = "root"
+# 4. Wait for 60 seconds to let the Flask App build
+resource "time_sleep" "wait_for_deploy" {
+  depends_on      = [railway_variable_collection.flask_vars]
+  create_duration = "60s"
 }
 
-resource "railway_variable" "app_mysql_password" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQLPASSWORD"
-  value          = "PlTLWwKtkioZFAhVQzsKEStRhheiGBBz"
-}
-
-resource "railway_variable" "app_mysql_database" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQLDATABASE"
-  value          = "railway"
-}
-
-resource "railway_variable" "app_mysql_host" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQLHOST"
-  value          = "mysql.railway.internal" 
-}
-
-resource "railway_variable" "app_mysql_port" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQLPORT"
-  value          = "3306"
-}
-
-resource "railway_variable" "mysql_url" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "MYSQL_URL"
-  value          = "mysql://root:PlTLWwKtkioZFAhVQzsKEStRhheiGBBz@mysql.railway.internal:3306/railway"
-}
-
-resource "railway_variable" "port" {
-  environment_id = railway_project.table_management.default_environment.id
-  service_id     = railway_service.flask_app.id
-  name           = "PORT"
-  value          = "5000"
-}
-
+# 5. Automatically "Generate Domain" for the Web App
 resource "railway_service_domain" "public_url" {
   environment_id = railway_project.table_management.default_environment.id
   service_id     = railway_service.flask_app.id
-  subdomain      = "tms-arjunren-grading-v2" 
+  
+  # This creates your public link: arjun-table-management.up.railway.app
+  subdomain      = "arjun-table-management" 
+  
+  # Do not attach the domain until the 60-second build wait is over
+  depends_on     = [time_sleep.wait_for_deploy]
 }
