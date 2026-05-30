@@ -50,18 +50,11 @@ app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', 'PlTLWwKtkioZFAhVQzsKEStRhheiGBBz')
 app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
 
-# ==========================================
-# PASTE THIS ENTIRE BLOCK RIGHT HERE
-# ==========================================
-# ==========================================
-# PASTE THIS ENTIRE BLOCK RIGHT HERE
-# ==========================================
 import time
 
 def initialize_database():
     max_retries = 10
-    
-    # 1. Lock onto the exact path so Gunicorn never loses the file
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     sql_file_path = os.path.join(current_dir, "tms_database.sql")
     
@@ -70,7 +63,6 @@ def initialize_database():
             print(f"Checking database status (Attempt {attempt + 1}/{max_retries})...")
             conn, cursor = get_db()
             
-            # Check if tables already exist
             cursor.execute("SHOW TABLES LIKE 'employee_management'")
             if cursor.fetchone():
                 print("Database tables already exist. Skipping initialization.")
@@ -84,22 +76,20 @@ def initialize_database():
                 print(f"CRITICAL ERROR: Cannot find {sql_file_path}")
                 return
                 
-            # 2. Read the file and manually split by ';' to avoid the multi=True bug
             with open(sql_file_path, "r") as sql_file:
                 sql_commands = sql_file.read().split(';')
                 
             print("Injecting tables into MySQL one by one...")
             
-            # 3. Execute each command individually safely
             for command in sql_commands:
-                if command.strip():  # Skip empty lines
+                if command.strip():
                     cursor.execute(command)
                 
             conn.commit()
             cursor.close()
             conn.close()
             print("Database initialized successfully!")
-            return  # Exit successfully
+            return
             
         except Exception as e:
             print(f"Database setup failed on attempt {attempt + 1}: {e}")
@@ -108,7 +98,6 @@ def initialize_database():
             
     print("CRITICAL: Could not connect to the database after maximum retries.")
 
-# Trigger the function when the app boots
 initialize_database()
 
 def print_to_escpos(text_data, printer_ip):

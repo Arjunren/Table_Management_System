@@ -2093,7 +2093,7 @@
                         if (R >= 5 && R <= 6 && C === 1) wsSummary[cellAddress].s = { ...cellStyle, font: { bold: true, color: { rgb: "047857" } } };
                     }
                 }
-                // Updated Merges for the new row indices
+             
                 wsSummary['!merges'] = [
                     { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
                     { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
@@ -2101,7 +2101,6 @@
                 ];
                 XLSX.utils.book_append_sheet(wb, wsSummary, "Dashboard Summary");
 
-                // --- SHEET 2: REVENUE TREND ---
                 const trendData = data.charts.trend.map(d => {
                     const gross = parseFloat(d.total);
                     const net = gross / 1.12;
@@ -2117,7 +2116,6 @@
                 applyTableStyles(wsTrend);
                 XLSX.utils.book_append_sheet(wb, wsTrend, "Revenue Trend");
 
-                // --- SHEET 3: HOURLY SALES ---
                 const hourlyData = data.charts.hourly_sales.map(d => {
                     const h = parseInt(d.hour);
                     const ampm = h >= 12 ? 'PM' : 'AM';
@@ -2412,7 +2410,6 @@
                 const res = await fetch('/api/manager/categories');
                 const data = await res.json();
 
-                // 1. Populate the Category Manager Modal
                 const tbody = document.getElementById('categoryManagerTableBody');
                 if (tbody) {
                     tbody.innerHTML = data.map(c => `
@@ -2426,7 +2423,6 @@
             `).join('');
                 }
 
-                // 2. Dynamically populate the "Add Menu" dropdown
                 const menuSelect = document.getElementById('menuCategory');
                 if (menuSelect) {
                     menuSelect.innerHTML = data.map(c => `<option value="${c.category_name}">${c.category_name}</option>`).join('');
@@ -2436,7 +2432,7 @@
 
         function openCategoryManager() {
             loadCategoriesList();
-            cancelEditCategory(); // Reset inputs every time we open it
+            cancelEditCategory();
             openModal('categoryManagerModal');
         }
 

@@ -24,7 +24,7 @@ def generate_specific_receipt_text(txn, items, printer_name):
         qty = item.get('quantity', 1)
         status = item.get('status', 'pending')
         item_type = item.get('type', 'solid')
-        item_note = item.get('note', '') # Grab note
+        item_note = item.get('note', '')
 
         receipt.append(f"{qty:<4} {name}")
         
@@ -37,7 +37,7 @@ def generate_specific_receipt_text(txn, items, printer_name):
             else:
                 receipt.append("     >> WAIT TO FIRE <<")
         
-        receipt.append("") # Blank space for easy reading
+        receipt.append("")
     receipt.append("----------------------------------------")
     receipt.append("             END OF ORDER               ")
     receipt.append("========================================\n\n\n\n\n\n")
